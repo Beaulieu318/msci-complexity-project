@@ -1,2 +1,3 @@
-# msci-complexity-project
-This is a repository for an MSci Complexity Project
+# MSci Complexity Project
+
+This is a repository for a MSci Complexity Project on modelling supermarket shoppers.
