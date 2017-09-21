@@ -1,4 +1,4 @@
-class shopping_list:
+class ShoppingList:
     """
     Creates the shopping list
     """

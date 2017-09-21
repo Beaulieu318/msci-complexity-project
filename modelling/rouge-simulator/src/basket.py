@@ -1,4 +1,4 @@
-class basket:
+class Basket:
     """
     Creates the basket
     """

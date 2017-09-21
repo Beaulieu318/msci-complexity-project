@@ -1,7 +1,8 @@
-import basket as bk
-import shopping_list as sl
+from .basket import Basket
+from .shopping_list import ShoppingList
 
-class item:
+
+class Item:
     """
     The items class allows objects to be placed onto the map.
     """
@@ -13,7 +14,7 @@ class item:
         self.floor = None
         self.position = (None, None)
         
-    def add_position(self, floor=0, position=(0,0)):
+    def add_position(self, floor=0, position=(0, 0)):
         """
         Adds the location to the item.
         
@@ -22,23 +23,25 @@ class item:
         """
         self.floor = floor
         self.position = position
-        
-class player(item):
+
+
+class Player(Item):
     """
     This is the person class. They can pick stuff up.
     """
     def __init__(self, name=''):
-        item.__init__(self, name=name, sign='@', solid=True, pickup=False)
+        Item.__init__(self, name=name, sign='@', solid=True, pickup=False)
         
     def create_basket(self):
-        self.current_basket = bk.basket()
+        self.current_basket = Basket()
         
     def create_shopping_list(self):
-        self.current_shopping_list = sl.shopping_list()
-        
-class wall(item):
+        self.current_shopping_list = ShoppingList()
+
+
+class Wall(Item):
     """
     The wall class builds a wall from one coordinate to another.
     """
     def __init__(self, name=''):
-        item.__init__(self, name=name, sign='#', solid=True, pickup=False)
+        Item.__init__(self, name=name, sign='#', solid=True, pickup=False)

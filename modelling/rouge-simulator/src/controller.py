@@ -1,4 +1,4 @@
-class controller:
+class Controller:
     """
     The map class allows a map to be built. The map contains multiple floors and a square area.
     """
@@ -14,7 +14,7 @@ class controller:
         
         :param map: (mapper) The map object which contains the map
         :param floor: (int) The floor which the area is being added to.
-        :param dimesions: (tuple(int, int)) The dimesions of the area of the floor (horizontal/x, vertical/y)
+        :param dimensions: (tuple(int, int)) The dimesions of the area of the floor (horizontal/x, vertical/y)
         """
         self.current_map = map
         self.current_map.add_level(floor)
@@ -26,7 +26,7 @@ class controller:
         
         :param item: (item) The item which is being added.
         """
-        if item.floor == None or item.position == (None, None):
+        if item.floor is None or item.position == (None, None):
             raise Exception('floor or position has not been set')
         
         if item.floor not in self.current_map.map:
@@ -49,7 +49,7 @@ class controller:
         else:
             raise Exception('This position is already taken')
         
-    def move_item(self, item, diff_level=0, diff_position=(0,0)):
+    def move_item(self, item, diff_level=0, diff_position=(0, 0)):
         """
         Moves an item by a floor or an amount.
         
@@ -64,7 +64,9 @@ class controller:
         item_index = self.items.index(item)
         item = self.items[item_index]
         new_level = item.floor + diff_level
-        new_position = (item.position[0] + diff_position[0], item.position[1] - diff_position[1]) # Check up on this (dodgy!!!)
+
+        # Check up on this (dodgy!!!)
+        new_position = (item.position[0] + diff_position[0], item.position[1] - diff_position[1])
         
         # Check if we are moving outside the area
         max_x = len(self.current_map.map[item.floor][0]) - 1
@@ -76,7 +78,6 @@ class controller:
         new_map_position = self.current_map.map[new_level][new_position[1]][new_position[0]]
         
         # Check if move can be made and move to the next position
-        moved = False
         if new_map_position == ['-']:
             del new_map_position[-1]
             new_map_position.append(item)
@@ -121,7 +122,7 @@ class controller:
             return
             
         # Check if item can be picked up
-        if position[-2].pickup == False:
+        if position[-2].pickup is False:
             return
             
         # Remove item from shopping list if it is in there

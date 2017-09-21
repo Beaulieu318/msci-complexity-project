@@ -1,4 +1,4 @@
-class mapper:
+class Mapper:
     """
     The map class allows a map to be built. The map contains multiple floors and a square area.
     """
@@ -21,13 +21,13 @@ class mapper:
         Add a floor area to the floor by setting the dimesions of the square area.
         
         :param floor: (int) The floor which the area is being added to.
-        :param dimesions: (tuple(int, int)) The dimesions of the area of the floor (horizontal/x, vertical/y)
+        :param dimensions: (tuple(int, int)) The dimesions of the area of the floor (horizontal/x, vertical/y)
         """
         if floor not in self.map:
             level_error_msg = 'floor {} does not exist.'.format(floor)
             raise Exception(level_error_msg)
             
-        area = [[['-'] for x in range(dimensions[0])] for y in range(dimensions[1])]
+        area = [[['-'] for _ in range(dimensions[0])] for _ in range(dimensions[1])]
         
         self.map[floor] = area
         
@@ -41,8 +41,7 @@ class mapper:
         for y in range(len(self.map[floor])):
             for x in range(len(self.map[floor][y])):
                 if self.map[floor][y][x][-1] == '-':
-                    print self.map[floor][y][x][-1],
+                    print(self.map[floor][y][x][-1],)
                 else:
-                    print self.map[floor][y][x][-1].sign,
-            print
-            
+                    print(self.map[floor][y][x][-1].sign,)
+            print()
