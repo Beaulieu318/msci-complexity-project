@@ -5,27 +5,34 @@ from matplotlib.animation import FuncAnimation
 
 
 class ShoppersAnimation:
-    def __init__(self):
+    def __init__(self, signals):
+        self.signals = signals
+
         self.fig = plt.figure(figsize=(7, 7))
         ax = self.fig.add_axes([0, 0, 1, 1], frameon=False)
-        ax.set_xlim(0, 10), ax.set_xticks([])
-        ax.set_ylim(0, 10), ax.set_yticks([])
+        ax.set_xlim(0, 5), ax.set_xticks([])
+        ax.set_ylim(0, 5), ax.set_yticks([])
 
-        self.shoppers_position = [np.array([[0,  0], [1,  1]]), np.array([[3,  3], [4,  4]])]
+        self.scat = {}
 
-        self.scat = []
-        for shopper in self.shoppers_position:
-            self.scat.append(ax.scatter(shopper[0][0], shopper[0][1], marker='1'))
+        for shopper in self.signals[-1].items():
+            self.scat[shopper[0]] = ax.scatter(shopper[1][0], shopper[1][1])
 
     def update(self, frame_number):
         time.sleep(0.1)
-        for shopper_num in range(len(self.shoppers_position)):
-            self.scat[shopper_num].set_offsets(self.shoppers_position[shopper_num][frame_number])
+        for shopper in self.signals[frame_number].items():
+            self.scat[shopper[0]].set_offsets(shopper[1])
 
     def run(self):
-        animation = FuncAnimation(self.fig, self.update, interval=10, frames=2)
+        animation = FuncAnimation(self.fig, self.update, interval=10, frames=len(self.signals))
         plt.show()
 
 
-visualisation = ShoppersAnimation()
-visualisation.run()
+# visualisation = ShoppersAnimation(
+    # [
+    #     {'1': [0,  5], '2': [3,  3]},
+    #     {'1': [3, 5], '2': [4, 4]},
+    #     {'1': [3, 6], '2': [4, 7]},
+    # ]
+# )
+# visualisation.run()

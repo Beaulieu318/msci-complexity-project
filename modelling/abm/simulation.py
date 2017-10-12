@@ -1,9 +1,9 @@
 from environment import Environment
 from shopper import Shopper
+from animation import ShoppersAnimation
 
 
-def simulation(max_iterations, max_shoppers, environment, environment_history, shoppers):
-
+def simulation(max_iterations, max_shoppers, environment, shoppers, shoppers_history):
     # Iterate over time
     for iteration in range(max_iterations):
 
@@ -18,8 +18,10 @@ def simulation(max_iterations, max_shoppers, environment, environment_history, s
             # Change the environment depending on what the shopper did
             # environment.change(shopper)
 
-        environment.output()
-        # environment_history.append(environment)
+        # environment.output()
+        shoppers_history.append(
+            dict(list([str(shopper), shopper.coordinates] for shopper in shoppers))
+        )
 
 
 def main():
@@ -32,10 +34,14 @@ def main():
         ['-', '-', '-', '-', '-'],
         ['-', '-', '-', '-', '-'],
     ])
-    environment_history = []
-    shoppers = []
 
-    simulation(max_iterations, max_shoppers, environment, environment_history, shoppers)
+    shoppers = []
+    shoppers_history = []
+
+    simulation(max_iterations, max_shoppers, environment, shoppers, shoppers_history)
+
+    anim = ShoppersAnimation(shoppers_history)
+    anim.run()
 
 
 if __name__ == '__main__':
