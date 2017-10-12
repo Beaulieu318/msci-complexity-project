@@ -10,8 +10,8 @@ class ShoppersAnimation:
 
         self.fig = plt.figure(figsize=(7, 7))
         ax = self.fig.add_axes([0, 0, 1, 1], frameon=False)
-        ax.set_xlim(0, 5), ax.set_xticks([])
-        ax.set_ylim(0, 5), ax.set_yticks([])
+        ax.set_xlim(0, 50), ax.set_xticks([])
+        ax.set_ylim(0, 50), ax.set_yticks([])
 
         self.scat = {}
 

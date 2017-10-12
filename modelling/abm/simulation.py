@@ -25,14 +25,16 @@ def simulation(max_iterations, max_shoppers, environment, shoppers, shoppers_his
 
 
 def main():
-    max_iterations = 20
-    max_shoppers = 3
+    max_iterations = 1000
+    max_shoppers = 20
     environment = Environment(area=[
-        ['-', '-', '-', '-', '-'],
-        ['-', '-', '-', '-', '-'],
-        ['-', '-', '-', '-', '-'],
-        ['-', '-', '-', '-', '-'],
-        ['-', '-', '-', '-', '-'],
+        # ['-', '-', '-', '-', '-'],
+        # ['-', '-', '-', '-', '-'],
+        # ['-', '-', '-', '-', '-'],
+        # ['-', '-', '-', '-', '-'],
+        # ['-', '-', '-', '-', '-'],
+
+        ['-' for _ in range(1000)] for _ in range(1000)
     ])
 
     shoppers = []
