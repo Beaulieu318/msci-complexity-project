@@ -15,10 +15,7 @@ def simulation(max_iterations, max_shoppers, environment, shoppers, shoppers_his
         for shopper in shoppers:
             shopper.shop(environment)
 
-            # Change the environment depending on what the shopper did
-            # environment.change(shopper)
-
-        # environment.output()
+        # Add shopper history to a list of dictionaries
         shoppers_history.append(
             dict(list([str(shopper), shopper.coordinates] for shopper in shoppers))
         )
@@ -26,7 +23,7 @@ def simulation(max_iterations, max_shoppers, environment, shoppers, shoppers_his
 
 def main():
     max_iterations = 1000
-    max_shoppers = 20
+    max_shoppers = 10
     environment = Environment(area=[
         # ['-', '-', '-', '-', '-'],
         # ['-', '-', '-', '-', '-'],
@@ -34,7 +31,7 @@ def main():
         # ['-', '-', '-', '-', '-'],
         # ['-', '-', '-', '-', '-'],
 
-        ['-' for _ in range(1000)] for _ in range(1000)
+        ['-' for _ in range(100)] for _ in range(100)
     ])
 
     shoppers = []
