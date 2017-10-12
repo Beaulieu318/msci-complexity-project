@@ -1,8 +1,17 @@
 class Environment:
     def __init__(self, area):
+        """
+        Initiates the environment which is the shopping mall.
+        :param area: (list(list)) The shopping mall which has '-' for blank empty locations.
+        """
         self.area = area
 
     def in_area(self, coordinates):
+        """
+        Checks to see if shopper is in the environments area.
+        :param coordinates: (tuple) The x and y coordinates of the new location of the shopper.
+        :return: (bool) A true/false whether the shopper is in the area.
+        """
         x_coord = coordinates[0]
         y_coord = coordinates[1]
 
@@ -12,6 +21,11 @@ class Environment:
         return False
 
     def is_empty(self, coordinates):
+        """
+        Checks to see if the new location is empty.
+        :param coordinates: (tuple) The x and y coordinates of the new location of the shopper.
+        :return: (bool) A true/false whether the new location is empty.
+        """
         x_coord = coordinates[0]
         y_coord = coordinates[1]
 
@@ -22,6 +36,10 @@ class Environment:
         return False
 
     def move_shopper(self, shopper):
+        """
+        Moves the shopper in the environment.
+        :param shopper: (object) The shopper object.
+        """
         shopper_x_coord = shopper.coordinates[0]
         shopper_y_coord = shopper.coordinates[1]
 
@@ -35,6 +53,10 @@ class Environment:
         self.area[shopper_new_y_coord][shopper_new_x_coord] = shopper
 
     def output(self):
+        """
+        Prints a diagram contain the location of the shoppers.
+        N.B. This has been superseded by the animation class.
+        """
         for y_area in self.area:
             for x__coord in y_area:
                 print(str(x__coord), end='')
