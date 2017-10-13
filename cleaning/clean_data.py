@@ -12,16 +12,16 @@ mm_df = shopper_df[shopper_df['location'] == 'Mall of Mauritius']
 p_df = shopper_df[shopper_df['location'] == 'Phoenix Mall']
 
 
-def clean_all_data(minimum, speed):
-    p_ds = DataSet(p_df)
-    m_ds = DataSet(mm_df)
-    h_ds = DataSet(hl_df)
+def clean_all_data(minimum, speed, open_time, close_time):
+    p_ds = DataSet(p_df, open_time, close_time)
+    m_ds = DataSet(mm_df, open_time, close_time)
+    h_ds = DataSet(hl_df, open_time, close_time)
     p_ds.clean(minimum, speed)
     m_ds.clean(minimum, speed)
     h_ds.clean(minimum, speed)
-    p_ds.export_csv()
-    m_ds.export_csv()
-    h_ds.export_csv()
+    p_ds.export_csv('phoenix')
+    m_ds.export_csv('mauritius')
+    h_ds.export_csv('homeleisure')
 
 
 class DataSet:
@@ -65,7 +65,6 @@ class DataSet:
         mac_group = self.df.groupby('mac_address')
         sizes = mac_group.size()
         thresh = [sizes < minimum]
-        #return thresh
         sizes_index = sizes.index.tolist()
         mac_address_sparse = [sizes_index[i] for i in range(len(sizes)) if thresh[0][i]]
         self.df = self.df[~self.df.mac_address.isin(mac_address_sparse)]
@@ -94,10 +93,11 @@ class DataSet:
     def clean(self, minimum, speed):
         self.remove_duplicates()
         self.remove_sparse_data(minimum)
-        return self.remove_unrealistic_speeds(speed)
+        self.remove_unrealistic_speeds(speed)
 
-    def export_csv(self):
-        self.df.to_csv()
+    def export_csv(self, mall_name):
+        self.df.to_csv(path_or_buf='../data/clean_data_' + mall_name + '.csv', columns=columns)
+
 
 def _speed_of_group(mac_dp):
     """
