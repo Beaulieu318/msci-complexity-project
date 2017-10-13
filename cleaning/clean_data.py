@@ -7,9 +7,22 @@ columns = ['mac_address', 'date_time', 'location', 'floor', 'x', 'y']
 
 shopper_df = pd.read_csv('../data/bag_mus_12-22-2016.csv', usecols=columns)
 shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
-#hl_df = shopper_df[shopper_df['location'] == 'Home & Leisure']
-#mm_df = shopper_df[shopper_df['location'] == 'Mall of Mauritius']
+hl_df = shopper_df[shopper_df['location'] == 'Home & Leisure']
+mm_df = shopper_df[shopper_df['location'] == 'Mall of Mauritius']
 p_df = shopper_df[shopper_df['location'] == 'Phoenix Mall']
+
+
+def clean_all_data(minimum, speed):
+    p_ds = DataSet(p_df)
+    m_ds = DataSet(mm_df)
+    h_ds = DataSet(hl_df)
+    p_ds.clean(minimum, speed)
+    m_ds.clean(minimum, speed)
+    h_ds.clean(minimum, speed)
+    p_ds.export_csv()
+    m_ds.export_csv()
+    h_ds.export_csv()
+
 
 class DataSet:
 
@@ -83,6 +96,8 @@ class DataSet:
         self.remove_sparse_data(minimum)
         return self.remove_unrealistic_speeds(speed)
 
+    def export_csv(self):
+        self.df.to_csv()
 
 def _speed_of_group(mac_dp):
     """
