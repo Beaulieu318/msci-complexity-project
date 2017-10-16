@@ -114,7 +114,7 @@ def _time_difference(t0, t1):
     return tdelta.seconds
 
 
-def clean(shopper_df):
+def clean(shopper_df, minimum, speed, open_time, close_time):
     """
     cleans the dataframe containing the signals of the shoppers by:
      - removing duplicates
@@ -126,9 +126,9 @@ def clean(shopper_df):
     :return: (pd.DataFrame) the cleaned signals of the shoppers
     """
     shopper_df = remove_duplicates(shopper_df)
-    shopper_df = remove_outside_hours(shopper_df, '08:00:00', '22:00:00')
-    shopper_df = remove_sparse_data(shopper_df, 10)
-    shopper_df = remove_unrealistic_speeds(shopper_df, 10)
+    shopper_df = remove_outside_hours(shopper_df, open_time, close_time)
+    shopper_df = remove_sparse_data(shopper_df, minimum)
+    shopper_df = remove_unrealistic_speeds(shopper_df, speed)
     return shopper_df
 
 
@@ -140,11 +140,22 @@ def main():
     mm_df = shopper_df[shopper_df['location'] == 'Mall of Mauritius']
     p_df = shopper_df[shopper_df['location'] == 'Phoenix Mall']
 
-    locations = {'home': hl_df, 'mauritius': mm_df, 'phoenix': p_df}
+    minimum = 10
+    speed = 3
 
-    for location, shopper_dirty_df in locations.items():
-        shopper_cleaned_df = clean(shopper_dirty_df)
-        shopper_cleaned_df.to_csv(path_or_buf='../data/clean_data_' + location + '.csv', columns=COLUMNS_TO_IMPORT)
+    locations = [
+        {'name': 'home', 'df': hl_df, 'open_time': '09:30:00', 'close_time': '20:00:00'},
+        {'name': 'mauritius', 'df': mm_df, 'open_time': '09:30:00', 'close_time': '21:00:00'},
+        {'name': 'phoenix', 'df': p_df, 'open_time': '09:30:00', 'close_time': '18:00:00'}
+    ]
+
+    for location in locations:
+        shopper_cleaned_df = clean(location['df'], minimum, speed, location['open_time'], location['close_time'])
+        shopper_cleaned_df.to_csv(
+            path_or_buf='../data/clean_data_' + location['name'] + '.csv',
+            columns=COLUMNS_TO_IMPORT,
+            index=False
+        )
 
 
 if __name__ == '__main__':
