@@ -140,7 +140,7 @@ def main():
     mm_df = shopper_df[shopper_df['location'] == 'Mall of Mauritius']
     p_df = shopper_df[shopper_df['location'] == 'Phoenix Mall']
 
-    locations = {'Home & Leisure': hl_df, 'Mall of Mauritius': mm_df, 'Phoenix Mall': p_df}
+    locations = {'home': hl_df, 'mauritius': mm_df, 'phoenix': p_df}
 
     for location, shopper_dirty_df in locations.items():
         shopper_cleaned_df = clean(shopper_dirty_df)
