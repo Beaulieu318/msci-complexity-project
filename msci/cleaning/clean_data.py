@@ -41,8 +41,8 @@ def remove_sparse_data(shopper_df, minimum):
     :return: (pd.DataFrame) the cleaned signals of the shoppers
     """
     mac_group = shopper_df.groupby('mac_address')
-    mac_address_sparse = mac_group.size()[mac_group.size() > minimum].index.tolist()
-    shopper_large_data_df = shopper_df[~shopper_df.mac_address.isin(mac_address_sparse)]
+    mac_address_sparse = mac_group.size()[mac_group.size() >= minimum].index.tolist()
+    shopper_large_data_df = shopper_df[shopper_df.mac_address.isin(mac_address_sparse)]
     return shopper_large_data_df
 
 
