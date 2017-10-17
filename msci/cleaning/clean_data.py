@@ -46,12 +46,13 @@ def remove_sparse_data(shopper_df, minimum):
     return shopper_large_data_df
 
 
-def remove_unrealistic_speeds(shopper_df, speed):
+def remove_unrealistic_speeds(shopper_df, speed, notebook=False):
     """
     removes mac ids that are moving too fast to be pedestrian movement
 
     :param shopper_df: (pd.DataFrame) the signals of the shoppers
     :param speed: max speed allowed for pedestrian
+    :param notebook: allows return of speeds for plotting purposes in notebook
     :return: (pd.DataFrame) the cleaned signals of the shoppers
     """
     shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
@@ -70,9 +71,12 @@ def remove_unrealistic_speeds(shopper_df, speed):
         speeds = speeds[speeds < 100000]
         if np.mean(speeds) > speed:
             mac_too_fast.append(mac)
-        mac_speeds.append(speeds)
-    shopper_good_speeds_df = shopper_df[~shopper_df.mac_address.isin(mac_too_fast)]
-    return shopper_good_speeds_df
+        mac_speeds.append(np.mean(speeds))
+    if notebook:
+        return mac_speeds
+    else:
+        shopper_good_speeds_df = shopper_df[~shopper_df.mac_address.isin(mac_too_fast)]
+        return shopper_good_speeds_df
 
 
 def _speed_of_group(mac_dp):
