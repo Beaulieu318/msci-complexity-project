@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'floor', 'x', 'y']
+COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
 
 
 def remove_duplicates(shopper_df):
