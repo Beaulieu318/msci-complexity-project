@@ -71,7 +71,7 @@ def remove_unrealistic_speeds(shopper_df, speed, notebook=False):
         speeds = speeds[speeds < 100000]
         if np.mean(speeds) > speed:
             mac_too_fast.append(mac)
-        mac_speeds.append(np.mean(speeds))
+        mac_speeds.append(np.nanmean(speeds))
     if notebook:
         return mac_speeds
     else:
