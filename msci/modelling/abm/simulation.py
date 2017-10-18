@@ -2,7 +2,7 @@ from environment import Environment
 from shopper import Shopper
 
 
-def simulation(max_iterations, max_shoppers, environment):
+def simulate(max_iterations, max_shoppers, environment):
     """
     The simulation iterates through time then through each shopper.
     A list at each time with a dictionary of shoppers location is returned.
@@ -45,7 +45,7 @@ def main(max_iterations=100, max_shoppers=10):
         ['-' for _ in range(100)] for _ in range(100)
     ])
 
-    return simulation(max_iterations, max_shoppers, environment)
+    return simulate(max_iterations, max_shoppers, environment)
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ from matplotlib.animation import FuncAnimation
 
 
 class ShoppersAnimation:
-    def __init__(self, signals, area):
+    def __init__(self, signals, area, interval=0):
         """
         Animates the shoppers.
         :param signals: (list(dict)) a list of times which contain a dictionary of the shoppers location.
@@ -11,6 +11,7 @@ class ShoppersAnimation:
         """
         self.signals = signals
         self.area = area
+        self.interval = interval
         self.scat = {}
         self.fig = plt.figure(figsize=(7, 7))
         self.ax = self.fig.add_axes([0, 0, 1, 1], frameon=False)
@@ -31,5 +32,5 @@ class ShoppersAnimation:
 
     def run(self):
         animation = FuncAnimation(self.fig, self._update, init_func=self._initiate_shopper(),
-                                  interval=10, frames=len(self.signals))
-        plt.show()
+                                  interval=self.interval, frames=len(self.signals))
+        return animation
