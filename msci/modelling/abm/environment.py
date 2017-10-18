@@ -5,6 +5,8 @@ class Environment:
         :param area: (list(list)) The shopping mall which has '-' for blank empty locations.
         """
         self.area = area
+        self.max_x = len(area[0])
+        self.max_y = len(area)
 
     def in_area(self, coordinates):
         """
@@ -51,6 +53,26 @@ class Environment:
 
         # Add shopper to new position
         self.area[shopper_new_y_coord][shopper_new_x_coord] = shopper
+
+    def find_walls(self):
+        """
+        Finds the locations of the walls in the area
+        :return: (list, list) two list containing the x and y coordinates of the walls
+        """
+        y_coord = 0
+
+        x_location_of_wall = []
+        y_location_of_wall = []
+        for y_area in self.area:
+            x_coord = 0
+            for x_value in y_area:
+                if x_value == '#':
+                    x_location_of_wall.append(x_coord)
+                    y_location_of_wall.append(y_coord)
+                x_coord += 1
+            y_coord += 1
+
+        return x_location_of_wall, y_location_of_wall
 
     def output(self):
         """
