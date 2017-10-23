@@ -1,7 +1,15 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
 
 COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
+
+shopper_df = pd.read_csv('../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
+shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
+p_df = shopper_df[shopper_df['location'] == 'Phoenix Mall']
+
+p = {'name': 'home', 'df': p_df, 'open_time': '09:30:00', 'close_time': '20:00:00'}
 
 
 def remove_duplicates(shopper_df):
@@ -15,7 +23,7 @@ def remove_duplicates(shopper_df):
     return shopper_unique_df
 
 
-def remove_outside_hours(shopper_df, open_time, close_time):
+def remove_outside_hours(shopper_df, open_time, close_time, analysis=False):
     """
     removes mac addresses that are received outside opening hours
 
@@ -29,10 +37,14 @@ def remove_outside_hours(shopper_df, open_time, close_time):
     signal_out_of_hours = date_index_df.between_time(close_time, open_time)
     mac_address_out_of_hours = signal_out_of_hours.mac_address.drop_duplicates().tolist()
     shopper_inside_hours_df = shopper_df[~shopper_df.mac_address.isin(mac_address_out_of_hours)]
-    return shopper_inside_hours_df
+    shopper_outside_hours_df = shopper_df[shopper_df.mac_address.isin(mac_address_out_of_hours)]
+    if analysis:
+        return shopper_inside_hours_df, shopper_outside_hours_df
+    else:
+        return shopper_inside_hours_df
 
 
-def remove_sparse_data(shopper_df, minimum):
+def remove_sparse_data(shopper_df, minimum, analysis=False):
     """
     removes mac_ids that have too few data points to be of use
 
@@ -43,10 +55,14 @@ def remove_sparse_data(shopper_df, minimum):
     mac_group = shopper_df.groupby('mac_address')
     mac_address_sparse = mac_group.size()[mac_group.size() >= minimum].index.tolist()
     shopper_large_data_df = shopper_df[shopper_df.mac_address.isin(mac_address_sparse)]
-    return shopper_large_data_df
+    shopper_sparse_data_df = shopper_df[~shopper_df.mac_address.isin(mac_address_sparse)]
+    if analysis:
+        return shopper_large_data_df, shopper_sparse_data_df
+    else:
+        return shopper_large_data_df
 
 
-def remove_unrealistic_speeds(shopper_df, speed, notebook=False):
+def remove_unrealistic_speeds(shopper_df, speed, notebook=False, analysis=False):
     """
     removes mac ids that are moving too fast to be pedestrian movement
 
@@ -76,7 +92,11 @@ def remove_unrealistic_speeds(shopper_df, speed, notebook=False):
         return mac_speeds
     else:
         shopper_good_speeds_df = shopper_df[~shopper_df.mac_address.isin(mac_too_fast)]
-        return shopper_good_speeds_df
+        shopper_wrong_speeds_df = shopper_df[shopper_df.mac_address.isin(mac_too_fast)]
+        if analysis:
+            return shopper_wrong_speeds_df, shopper_good_speeds_df
+        else:
+            return shopper_good_speeds_df
 
 
 def _speed_of_group(mac_dp):
@@ -94,6 +114,13 @@ def _speed_of_group(mac_dp):
     dt = np.array([_time_difference(times[i], times[i + 1]) for i in range(len(times) - 1)])
     speeds = euclideans / dt
     return speeds
+
+
+def time_delta(mac, df):
+    mac_group = df.groupby('mac_address')
+    times = mac_group.get_group(mac).date_time.tolist()
+    time_deltas = [_time_difference(times[i],times[i+1]) for i in range(len(times)-1)]
+    return time_deltas, times
 
 
 def _euclidean_distance(xy1, xy2):
@@ -114,8 +141,16 @@ def _time_difference(t0, t1):
     :param t1: (timedelta object) second timestamp
     :return: (float) number of seconds elapsed between t0, t1
     """
+
     tdelta = t1 - t0
-    return tdelta.seconds
+    return tdelta.total_seconds
+
+
+def plot_path(mad, df):
+    fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(12, 12))
+    for title, group in df[df.mac_address.isin(mad)].groupby('mac_address'):
+        group.plot(x='x', y='y', ax=axes, legend=False, linewidth=1)
+    fig.show()
 
 
 def clean(shopper_df, minimum, speed, open_time, close_time):
@@ -134,6 +169,14 @@ def clean(shopper_df, minimum, speed, open_time, close_time):
     shopper_df = remove_sparse_data(shopper_df, minimum)
     shopper_df = remove_unrealistic_speeds(shopper_df, speed)
     return shopper_df
+
+
+def time_volume_analysis(df):
+    fig = plt.figure()
+    df.date_time.hist(bins=200)
+    plt.xlabel('Time')
+    plt.ylabel('Counts')
+    fig.show()
 
 
 def main():
