@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
 
@@ -99,6 +100,15 @@ def remove_unrealistic_speeds(shopper_df, speed, notebook=False, analysis=False)
             return shopper_good_speeds_df
 
 
+def remove_long_gap(shopper_df, max_gap):
+    time_sorted = shopper_df.sort_values('date_time')
+    mac_group = time_sorted.groupby('mac_address')
+    macs = mac_group.mac_address.drop_duplicates().tolist()
+    deltas = time_delta(macs, mac_group, plot=False, flat=False)
+    exceed = [np.amax(i)>max_gap for i in deltas]
+    return exceed
+
+
 def _speed_of_group(mac_dp):
     """
     computes speeds of mac_ids
@@ -116,11 +126,37 @@ def _speed_of_group(mac_dp):
     return speeds
 
 
-def time_delta(mac, df):
+def time_delta(macs, df, plot=True, flat=True):
+    df = df.sort_values('date_time')
     mac_group = df.groupby('mac_address')
-    times = mac_group.get_group(mac).date_time.tolist()
-    time_deltas = [_time_difference(times[i],times[i+1]) for i in range(len(times)-1)]
-    return time_deltas, times
+    td = []
+    for mac in macs:
+        times = mac_group.get_group(mac).date_time.tolist()
+        time_deltas = [_time_difference(times[i],times[i+1]) for i in range(len(times)-1)]
+        td.append(time_deltas)
+    if plot:
+        fig = plt.figure()
+        plt.xlabel('Difference in Time Between Readings')
+        plt.ylabel('Probability')
+        if flat:
+            flat_td = [i for sub in td for i in sub]
+            plt.hist(flat_td, bins=int(len(flat_td)/3), normed=True)
+            fig.show()
+            return flat_td
+        else:
+            for mac in range(len(td)):
+                plt.hist(td[mac], bins=200, normed=True)
+        fig.show()
+    return td
+
+
+def df_to_csv(df, name, sort=False):
+    if sort:
+        time_sort = df.sort_values('date_time')
+        mac_group = time_sort.groupby('mac_address')
+        mac_group.to_csv(path_or_buf='../data/clean_data_' + name + '.csv', columns=COLUMNS_TO_IMPORT, index=False)
+    else:
+        df.to_csv(path_or_buf='../data/clean_data_' + name + '.csv', columns=COLUMNS_TO_IMPORT, index=False)
 
 
 def _euclidean_distance(xy1, xy2):
@@ -141,9 +177,15 @@ def _time_difference(t0, t1):
     :param t1: (timedelta object) second timestamp
     :return: (float) number of seconds elapsed between t0, t1
     """
+    td = t1.to_datetime() - t0.to_datetime()
+    delta = divmod(td.days * 86400 + td.seconds, 60)
+    return delta[0]*60 + delta[1]
 
-    tdelta = t1 - t0
-    return tdelta.total_seconds
+
+def _filter_deviation(means, std):
+    data = list(zip(means,std))
+    data = [i for i in data if i[1] < 2*i[0]]
+    return data
 
 
 def plot_path(mad, df):
