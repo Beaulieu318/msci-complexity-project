@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from datetime import datetime
+import matplotlib.image as mpimg
 
 COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
 
@@ -100,13 +100,26 @@ def remove_unrealistic_speeds(shopper_df, speed, notebook=False, analysis=False)
             return shopper_good_speeds_df
 
 
-def remove_long_gap(shopper_df, max_gap):
-    time_sorted = shopper_df.sort_values('date_time')
-    mac_group = time_sorted.groupby('mac_address')
-    macs = mac_group.mac_address.drop_duplicates().tolist()
-    deltas = time_delta(macs, mac_group, plot=False, flat=False)
-    exceed = [np.amax(i)>max_gap for i in deltas]
-    return exceed
+def remove_long_gap(shopper_df, max_gap, analysis=False):
+    """
+    removes data points where a time gap between signals exceeds max_gap
+
+    :param shopper_df: dirty data frames
+    :param max_gap: largest tolerable gap between successive signals
+    :param analysis: return negative df
+    :return: cleaned data frame
+    """
+    macs = shopper_df.mac_address.drop_duplicates().tolist()
+    deltas = time_delta(macs, shopper_df, plot=False, flat=False)
+    print('deltas')
+    exceed = [np.amax(i) > max_gap for i in deltas]
+    mac_address_gap = [macs[mac] for mac in range(len(macs)) if exceed[mac]]
+    shopper_no_gap_df = shopper_df[~shopper_df.mac_address.isin(mac_address_gap)]
+    if analysis:
+        shopper_gap_df = shopper_df[shopper_df.mac_address.isin(mac_address_gap)]
+        return shopper_no_gap_df, shopper_gap_df
+    else:
+        return shopper_no_gap_df
 
 
 def _speed_of_group(mac_dp):
@@ -127,6 +140,15 @@ def _speed_of_group(mac_dp):
 
 
 def time_delta(macs, df, plot=True, flat=True):
+    """
+    computes time differences for each reading
+
+    :param macs: mac addresses
+    :param df: data frame
+    :param plot: whether to plot
+    :param flat: whether to consider each mac address separately
+    :return: time deltas
+    """
     df = df.sort_values('date_time')
     mac_group = df.groupby('mac_address')
     td = []
@@ -177,21 +199,49 @@ def _time_difference(t0, t1):
     :param t1: (timedelta object) second timestamp
     :return: (float) number of seconds elapsed between t0, t1
     """
-    td = t1.to_datetime() - t0.to_datetime()
-    delta = divmod(td.days * 86400 + td.seconds, 60)
-    return delta[0]*60 + delta[1]
+    tdelta = t1 - t0
+    return tdelta.seconds
 
 
-def _filter_deviation(means, std):
+def _filter_deviation(means, std, f):
+    """
+    filters data whose standard deviation exceeds the mean by a factor f
+    :param means: mean of time deltas
+    :param std: standard deviation of time deltas
+    :param f: tolerance factor
+    :return: filtered data
+    """
     data = list(zip(means,std))
-    data = [i for i in data if i[1] < 2*i[0]]
+    data = [i for i in data if i[1] < f*i[0]]
     return data
 
 
-def plot_path(mad, df):
-    fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(12, 12))
-    for title, group in df[df.mac_address.isin(mad)].groupby('mac_address'):
-        group.plot(x='x', y='y', ax=axes, legend=False, linewidth=1)
+def plot_path(macs, df):
+    """
+    plots paths of list of mac addresses through shopping mall
+
+    :param macs: list of mac addresses
+    :param df: data frame
+    :return: None
+    """
+    fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
+
+    img = mpimg.imread("../images/mall_of_mauritius_map.png")
+    axes.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
+
+    df_group = df[
+        df.mac_address.isin(macs)
+    ].groupby('mac_address')
+
+    for title, group in df_group:
+        group.plot(x='x', y='y', ax=axes, label=title)
+
+    axes.set_title('Stores in Mall of Mauritius')
+    axes.set_xlabel('x (m)')
+    axes.set_ylabel('y (m)')
+    axes.set_xlim([0, 350])
+    axes.set_ylim([0, 200])
+    axes.legend(loc='upper center', markerscale=10., ncol=3, bbox_to_anchor=(0.5, -0.1));
     fig.show()
 
 
