@@ -152,24 +152,36 @@ def time_delta(macs, df, plot=True, flat=True):
     df = df.sort_values('date_time')
     mac_group = df.groupby('mac_address')
     td = []
+    delta_r = []
     for mac in macs:
         times = mac_group.get_group(mac).date_time.tolist()
+        x = mac_group.get_group(mac).x.tolist()
+        y = mac_group.get_group(mac).y.tolist()
+        pos = list(zip(x,y))
         time_deltas = [_time_difference(times[i],times[i+1]) for i in range(len(times)-1)]
+        r_deltas = [_euclidean_distance(pos[i],pos[i+1]) for i in range(len(times)-1)]
+        delta_r.append(r_deltas)
         td.append(time_deltas)
     if plot:
         fig = plt.figure()
         plt.xlabel('Difference in Time Between Readings')
         plt.ylabel('Probability')
         if flat:
-            flat_td = [i for sub in td for i in sub]
-            plt.hist(flat_td, bins=int(len(flat_td)/3), normed=True)
+            flat_td = [i for sub in td for i in sub if i is not 0]
+            plt.hist(flat_td, bins=50, normed=True)
             fig.show()
             return flat_td
         else:
             for mac in range(len(td)):
                 plt.hist(td[mac], bins=200, normed=True)
         fig.show()
-    return td
+    return td, delta_r
+
+
+def delta_t_r_profile(t, r, delta_t):
+    t_filter = [i for i in t if i == delta_t]
+    r_filter = [r[i] for i in range(len(t)) if t[i] == delta_t]
+    return r_filter
 
 
 def df_to_csv(df, name, sort=False):
@@ -243,6 +255,52 @@ def plot_path(macs, df):
     axes.set_ylim([0, 200])
     axes.legend(loc='upper center', markerscale=10., ncol=3, bbox_to_anchor=(0.5, -0.1));
     fig.show()
+
+
+def radius_gyration(df):
+    sorted = df.sort_values('date_time')
+    grouped = sorted.groupby('mac_address')
+    macs = df.mac_address.drop_duplicates().tolist()[0:20]
+    centroids = [np.array((np.mean(grouped.get_group(i).x.tolist()), np.mean(grouped.get_group(i).y.tolist()))) for i in macs]
+    gyrations = []
+    for mac in range(len(macs)):
+        r_cm = centroids[mac]
+        x = grouped.get_group(macs[mac]).x.tolist()
+        y = grouped.get_group(macs[mac]).y.tolist()
+        r = [np.array(i) for i in list(zip(x, y))]
+        displacements = [i - r_cm for i in r]
+        displacement_sum = [i[0]**2 + i[1]**2 for i in displacements]
+        gyrations.append(np.sqrt(np.mean(displacement_sum)))
+    return centroids, gyrations
+
+
+def total_delta_t(df, plot=True):
+    sorted = df.sort_values('date_time')
+    grouped = sorted.groupby('mac_address')
+    macs = df.mac_address.drop_duplicates().tolist()
+    groups = [grouped.get_group(i).date_time.tolist() for i in macs]
+    counts = [len(i) for i in groups]
+    time_deltas = [_time_difference(i[0], i[-1]) for i in groups]
+    if plot:
+        td0 = [i for i in time_deltas if i is not 0] #gets rid of mac addresses for which there is only one reading
+        fig = plt.figure()
+        plt.scatter(time_deltas, counts)
+        plt.xlabel('Length of Stay')
+        plt.ylabel('Number of Counts')
+        fig.show()
+        fig = plt.figure()
+        hist = plt.hist(td0, bins=50, normed=False)
+        plt.xlabel('Length of Stay')
+        plt.ylabel('Probability (Un-normalised)')
+        fig.show()
+        return time_deltas, counts, hist
+    else:
+        return time_deltas, counts
+
+def delta_r(df):
+    sorted = df.sort_values('date_time')
+    grouped = sorted.groupby('mac_address')
+    macs = df.mac_address.drop_duplicates().tolist()
 
 
 def clean(shopper_df, minimum, speed, open_time, close_time):
