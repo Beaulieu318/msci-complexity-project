@@ -66,11 +66,10 @@ def count_density_variance(signal_df, mac_address_df, minute_resolution):
     return cdv
 
 
-def total_delta_t(df):
-    sorted = df.sort_values('date_time')
-    grouped = sorted.groupby('mac_address')
-    macs = df.mac_address.drop_duplicates().tolist()
-    groups = [grouped.get_group(i).date_time.tolist() for i in macs]
-    counts = [len(i) for i in groups]
+def length_of_stay(signal_df, mac_address_df):
+    signal_sorted_df = signal_df.sort_values('date_time')
+    signal_mac_group = signal_sorted_df.groupby('mac_address')
+    macs = mac_address_df.mac_address.tolist()
+    groups = [signal_mac_group.get_group(i).date_time.tolist() for i in macs]
     time_deltas = [time_difference(i[0], i[-1]) for i in groups]
-    return time_deltas, counts
+    return time_deltas
