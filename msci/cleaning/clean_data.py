@@ -299,6 +299,12 @@ def length_of_stay(df, plot=True):
 
 
 def count_density_variance(df, minute_resolution):
+    """
+    Bins times into intervals of length 'minute resolution', and finds variance of counts
+    :param df: data frame
+    :param minute_resolution: (str) number of minutes into which to group data
+    :return: list of count variances for each mac address
+    """
     sorted = df.sort_values('date_time')
     grouped = sorted.groupby('mac_address')
     macs = df.mac_address.drop_duplicates().tolist()
