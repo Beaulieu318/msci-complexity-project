@@ -274,7 +274,7 @@ def radius_gyration(df):
     return centroids, gyrations
 
 
-def total_delta_t(df, plot=True):
+def length_of_stay(df, plot=True):
     sorted = df.sort_values('date_time')
     grouped = sorted.groupby('mac_address')
     macs = df.mac_address.drop_duplicates().tolist()
@@ -296,6 +296,19 @@ def total_delta_t(df, plot=True):
         return time_deltas, counts, hist
     else:
         return time_deltas, counts
+
+
+def count_density_variance(df, minute_resolution):
+    sorted = df.sort_values('date_time')
+    grouped = sorted.groupby('mac_address')
+    macs = df.mac_address.drop_duplicates().tolist()
+    cdv = []
+    for mac in macs:
+        time = grouped.get_group(mac).date_time.dt.round(minute_resolution + 'min').value_counts()
+        count_variance = time.std()
+        cdv.append(count_variance)
+    return cdv
+
 
 def delta_r(df):
     sorted = df.sort_values('date_time')
