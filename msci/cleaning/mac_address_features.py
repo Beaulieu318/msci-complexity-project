@@ -66,10 +66,20 @@ def count_density_variance(signal_df, mac_address_df, minute_resolution):
     return cdv
 
 
-def length_of_stay(signal_df, mac_address_df):
+def calculate_length_of_stay(signal_df, mac_address_df):
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     macs = mac_address_df.mac_address.tolist()
     groups = [signal_mac_group.get_group(i).date_time.tolist() for i in macs]
     time_deltas = [time_difference(i[0], i[-1]) for i in groups]
     return time_deltas
+
+
+def is_out_of_hours(signal_df, mac_address_df):
+    macs = mac_address_df.mac_address.tolist()
+    date_index_df = signal_df.copy()
+    date_index_df.index = date_index_df.date_time.astype('datetime64[ns]')
+    signal_out_of_hours = date_index_df.between_time('03:00:00', '05:00:00')
+    mac_address_out_of_hours = signal_out_of_hours.mac_address.drop_duplicates().tolist()
+    macs_is_out_of_hours = [1 if mac in mac_address_out_of_hours else 0 for mac in macs]
+    return macs_is_out_of_hours
