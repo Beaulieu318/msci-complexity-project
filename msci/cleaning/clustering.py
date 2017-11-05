@@ -74,15 +74,32 @@ def feature_statistics(df, feature):
     return means, std
 
 
-def statistics_by_manufacturer(df, feature):
+def statistics_by_manufacturer(df, feature, plot=True):
+    """
+    calculates statistics for different manufacturers
+    :param df: data frame
+    :param feature: (str) name of feature you want to analyse e.g. gyration, cdv, length_of_stay
+    :return: lists of manufacturer, mean statistic, and standard deviation statistic
+    """
     manufacturers = df.manufacturer.drop_duplicates().tolist()
     grouped = df.groupby('manufacturer')
     man_lengths = [len(grouped.get_group(i)) for i in manufacturers]
     manufacturers = [manufacturers[i] for i in range(len(manufacturers)) if man_lengths[i] >= 70]
     means = [grouped.get_group(i)[feature].mean() for i in manufacturers]
-    #std = [grouped.get_group(i)[feature].std() for i in manufacturers]
-    return list(zip(means, manufacturers))
-    #return means, std, manufacturers
+    std = [grouped.get_group(i)[feature].std() for i in manufacturers]
+    if plot:
+        fig = plt.figure()
+        hist, bins = np.histogram(means, bins=len(means))
+        center = (bins[:-1] + bins[1:]) / 2
+        mask1 = center < 30
+        mask2 = center >= 30
+        plt.bar(center[mask1], hist[mask1], color='red', label='Stationary')
+        plt.bar(center[mask2], hist[mask2], color='blue', label='Moving')
+        plt.xlabel(feature)
+        plt.ylabel('Un-normalised Probability')
+        plt.legend(loc=2)
+        fig.show()
+    return manufacturers, means, std
 
 
 def plot_3d(sep_clusters):
@@ -141,4 +158,23 @@ def gyration_manufacturer(df, data_type=None, specific_manufacturer='Samsung Ele
             plt.xlabel('Radius of Gyration')
             plt.ylabel('Probability')
     plt.legend(loc=1)
+    fig.show()
+
+
+def bar_chart(manufacturers, data, feature):
+    n = len(manufacturers)
+
+    ind = np.arange(n)  # the x locations for the groups
+    width = 0.35  # the width of the bars
+
+    fig, ax = plt.subplots()
+
+    ax.bar(ind, data, width, color='r')
+
+    # add some text for labels, title and axes ticks
+    ax.set_ylabel('Manufacturer')
+    ax.set_title(feature + 'Statistics for Different Manufacturers')
+    ax.set_xticks(ind + width / 2)
+    ax.set_xticklabels(manufacturers, rotation='vertical')
+
     fig.show()
