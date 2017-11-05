@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
@@ -63,3 +64,11 @@ def plot_path(macs, df):
     axes.set_ylim([0, 200])
     axes.legend(loc='upper center', markerscale=10., ncol=3, bbox_to_anchor=(0.5, -0.1));
     fig.show()
+
+
+def add_device_type_signal(signal_df):
+    mac_cross_reference_df = pd.read_csv('../data/mac_address_cross_reference.csv')
+    signal_df2 = signal_df.copy()
+    signal_df2['mac_address_short'] = signal_df2.mac_address.str.replace(':', '').str.upper().str[:6]
+    signal_df2 = signal_df2.merge(mac_cross_reference_df, how='left', left_on='mac_address_short', right_on='Assignment')
+    return signal_df2['Organization Name']
