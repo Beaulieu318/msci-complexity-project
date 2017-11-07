@@ -1,13 +1,13 @@
-import pandas as pd
-import numpy as np
+import os
 
 from msci.cleaning.utils import *
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
 COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
 
 
 def import_data(mall='Phoenix Mall'):
-    shopper_df = pd.read_csv('../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
+    shopper_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
     shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
     signal_df = shopper_df[shopper_df['location'] == mall]
     return signal_df
@@ -40,7 +40,7 @@ def calculate_radius_gyration(signal_df, mac_address_df):
 
 
 def find_device_type(mac_address_df):
-    mac_cross_reference_df = pd.read_csv('../data/mac_address_cross_reference.csv')
+    mac_cross_reference_df = pd.read_csv(dir_path + '/../data/mac_address_cross_reference.csv')
     mac_address_df2 = mac_address_df.copy()
     mac_address_df2['mac_address_short'] = mac_address_df2.mac_address.str.replace(':', '').str.upper().str[:6]
     mac_address_df2 = mac_address_df2.merge(mac_cross_reference_df, how='left', left_on='mac_address_short', right_on='Assignment')
@@ -83,3 +83,23 @@ def is_out_of_hours(signal_df, mac_address_df):
     mac_address_out_of_hours = signal_out_of_hours.mac_address.drop_duplicates().tolist()
     macs_is_out_of_hours = [1 if mac in mac_address_out_of_hours else 0 for mac in macs]
     return macs_is_out_of_hours
+
+
+def average_speed(signal_df, mac_address_df):
+    macs = mac_address_df.mac_address.tolist()
+    signal_sorted_df = signal_df.sort_values('date_time')
+    signal_mac_group = signal_sorted_df.groupby('mac_address')
+    av_speeds = []
+    for mac in macs:
+        mac_signals_df = signal_mac_group.get_group(mac)
+        if len(mac_signals_df) > 1:
+            columns_to_diff = ['date_time', 'x', 'y']
+            mac_diffs_df = (mac_signals_df[columns_to_diff].shift(-1) - mac_signals_df[columns_to_diff]).iloc[:-1]
+            mac_diffs_df = mac_diffs_df.assign(secs=mac_diffs_df.date_time.dt.seconds)
+            mac_diffs_df = mac_diffs_df[mac_diffs_df.secs > 0]
+            mac_speeds_df = (mac_diffs_df.x ** 2 + mac_diffs_df .y ** 2) ** 0.5 / mac_diffs_df.secs
+            av_speed = mac_speeds_df.mean()
+        else:
+            av_speed = np.nan
+        av_speeds.append(av_speed)
+    return av_speeds
