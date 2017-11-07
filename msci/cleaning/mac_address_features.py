@@ -6,7 +6,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
 
 
-def import_data(mall='Phoenix Mall'):
+def import_data(mall='Mall of Mauritius'):
     shopper_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
     shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
     signal_df = shopper_df[shopper_df['location'] == mall]
@@ -44,7 +44,7 @@ def find_device_type(mac_address_df):
     mac_address_df2 = mac_address_df.copy()
     mac_address_df2['mac_address_short'] = mac_address_df2.mac_address.str.replace(':', '').str.upper().str[:6]
     mac_address_df2 = mac_address_df2.merge(mac_cross_reference_df, how='left', left_on='mac_address_short', right_on='Assignment')
-    return mac_address_df2['Organization Name'].tolist()
+    return mac_address_df2['Organization Name']
 
 
 def count_density_variance(signal_df, mac_address_df, minute_resolution):
