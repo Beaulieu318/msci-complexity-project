@@ -6,6 +6,13 @@ import matplotlib.image as mpimg
 COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
 
 
+def import_data(mall='Mall of Mauritius'):
+    shopper_df = pd.read_csv('../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
+    shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
+    signal_df = shopper_df[shopper_df['location'] == mall]
+    return signal_df
+
+
 def df_to_csv(df, name, sort=False):
     if sort:
         time_sort = df.sort_values('date_time')
