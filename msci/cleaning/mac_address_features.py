@@ -104,7 +104,7 @@ def calculate_average_speed(signal_df, mac_address_df):
     return av_speeds
 
 
-def calculate_average_turning_circle(signal_df, mac_address_df):
+def calculate_average_turning_angle(signal_df, mac_address_df):
     macs = mac_address_df.mac_address.tolist()
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
@@ -121,7 +121,7 @@ def calculate_average_turning_circle(signal_df, mac_address_df):
             u = vectors[1:]
             v = vectors[:-1]
             cos_angle = dot(u, v) / (mod(u) * mod(v))
-            rad_angle = np.arccos(cos_angle) - np.pi
+            rad_angle = np.arccos(cos_angle)
             av_turning_circle = np.nanmean(rad_angle)
         av_turning_circles.append(av_turning_circle)
     return av_turning_circles
