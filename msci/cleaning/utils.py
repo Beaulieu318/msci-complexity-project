@@ -45,24 +45,25 @@ def plot_path(macs, df):
     :param df: data frame
     :return: None
     """
-    fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
+
+    fig = plt.figure()
 
     img = mpimg.imread("../images/mall_of_mauritius_map.png")
-    axes.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
+    plt.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
     df_group = df[
         df.mac_address.isin(macs)
     ].groupby('mac_address')
 
     for title, group in df_group:
-        group.plot(x='x', y='y', ax=axes, label=title)
+        plt.plot(group.x, group.y, label=title)
 
-    axes.set_title('Stores in Mall of Mauritius')
-    axes.set_xlabel('x (m)')
-    axes.set_ylabel('y (m)')
-    axes.set_xlim([0, 350])
-    axes.set_ylim([0, 200])
-    axes.legend(loc='upper center', markerscale=10., ncol=3, bbox_to_anchor=(0.5, -0.1));
+    plt.title('Stores in Mall of Mauritius')
+    plt.xlabel('x (m)')
+    plt.ylabel('y (m)')
+    plt.xlim((0, 350))
+    plt.ylim((0, 200))
+    plt.legend(loc='upper center', markerscale=10., ncol=3, bbox_to_anchor=(0.5, -0.1));
     fig.show()
 
 
