@@ -44,7 +44,7 @@ def find_device_type(mac_address_df):
     mac_address_df2 = mac_address_df.copy()
     mac_address_df2['mac_address_short'] = mac_address_df2.mac_address.str.replace(':', '').str.upper().str[:6]
     mac_address_df2 = mac_address_df2.merge(mac_cross_reference_df, how='left', left_on='mac_address_short', right_on='Assignment')
-    return mac_address_df2['Organization Name']
+    return mac_address_df2['Organization Name'].tolist()
 
 
 def count_density_variance(signal_df, mac_address_df, minute_resolution):

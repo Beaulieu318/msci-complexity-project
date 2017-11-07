@@ -74,7 +74,7 @@ def plot_path(macs, df, scatter=True):
     plt.ylabel('y (m)')
     plt.xlim((0, 350))
     plt.ylim((0, 200))
-    plt.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1));
+    plt.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1))
     fig.show()
 
 
@@ -83,4 +83,4 @@ def add_device_type_signal(signal_df):
     signal_df2 = signal_df.copy()
     signal_df2['mac_address_short'] = signal_df2.mac_address.str.replace(':', '').str.upper().str[:6]
     signal_df2 = signal_df2.merge(mac_cross_reference_df, how='left', left_on='mac_address_short', right_on='Assignment')
-    return signal_df2['Organization Name']
+    return signal_df2['Organization Name'].tolist()
