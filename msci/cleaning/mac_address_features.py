@@ -85,13 +85,14 @@ def is_out_of_hours(signal_df, mac_address_df):
     return macs_is_out_of_hours
 
 
-def average_speed(signal_df, mac_address_df):
+def calculate_average_speed(signal_df, mac_address_df):
     macs = mac_address_df.mac_address.tolist()
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     av_speeds = []
     for mac in macs:
         mac_signals_df = signal_mac_group.get_group(mac)
+        av_speed = np.nan
         if len(mac_signals_df) > 1:
             columns_to_diff = ['date_time', 'x', 'y']
             mac_diffs_df = (mac_signals_df[columns_to_diff].shift(-1) - mac_signals_df[columns_to_diff]).iloc[:-1]
@@ -99,7 +100,28 @@ def average_speed(signal_df, mac_address_df):
             mac_diffs_df = mac_diffs_df[mac_diffs_df.secs > 0]
             mac_speeds_df = (mac_diffs_df.x ** 2 + mac_diffs_df .y ** 2) ** 0.5 / mac_diffs_df.secs
             av_speed = mac_speeds_df.mean()
-        else:
-            av_speed = np.nan
         av_speeds.append(av_speed)
     return av_speeds
+
+
+def calculate_average_turning_circle(signal_df, mac_address_df):
+    macs = mac_address_df.mac_address.tolist()
+    signal_sorted_df = signal_df.sort_values('date_time')
+    signal_mac_group = signal_sorted_df.groupby('mac_address')
+    dot = lambda vec1, vec2: vec1[:, 0] * vec2[:, 0] + vec1[:, 1] * vec2[:, 1]
+    mod = lambda vec: np.sqrt(vec[:, 0] ** 2 + vec[:, 1] ** 2)
+    av_turning_circles = []
+    for mac in macs:
+        mac_signals_df = signal_mac_group.get_group(mac)
+        av_turning_circle = np.nan
+        if len(mac_signals_df) > 2:
+            columns_to_diff = ['x', 'y']
+            coords = mac_signals_df[columns_to_diff].as_matrix()
+            vectors = coords[1:] - coords[:-1]
+            u = vectors[1:]
+            v = vectors[:-1]
+            cos_angle = dot(u, v) / (mod(u) * mod(v))
+            rad_angle = np.arccos(cos_angle) - np.pi
+            av_turning_circle = np.nanmean(rad_angle)
+        av_turning_circles.append(av_turning_circle)
+    return av_turning_circles
