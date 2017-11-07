@@ -37,12 +37,13 @@ def time_difference(t0, t1):
     return tdelta.seconds
 
 
-def plot_path(macs, df):
+def plot_path(macs, df, scatter=True):
     """
     plots paths of list of mac addresses through shopping mall
 
     :param macs: list of mac addresses
     :param df: data frame
+    :param scatter: boolean to allow for scatter or plot
     :return: None
     """
 
@@ -56,14 +57,17 @@ def plot_path(macs, df):
     ].groupby('mac_address')
 
     for title, group in df_group:
-        plt.plot(group.x, group.y, label=title)
+        if scatter:
+            plt.scatter(group.x, group.y, label=title, s=0.5)
+        else:
+            plt.plot(group.x, group.y, label=title)
 
     plt.title('Stores in Mall of Mauritius')
     plt.xlabel('x (m)')
     plt.ylabel('y (m)')
     plt.xlim((0, 350))
     plt.ylim((0, 200))
-    plt.legend(loc='upper center', markerscale=10., ncol=3, bbox_to_anchor=(0.5, -0.1));
+    plt.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1));
     fig.show()
 
 
