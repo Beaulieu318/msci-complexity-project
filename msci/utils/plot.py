@@ -43,7 +43,7 @@ def plot_path(signal_df, mac_address_df, scatter=True):
     fig.show()
 
 
-def plot_path_inline(signal_df, mac_address_df, ax, scatter=True):
+def plot_path_jn(signal_df, mac_address_df, ax, scatter=True):
     """
     plots paths of list of mac addresses through shopping mall
 
