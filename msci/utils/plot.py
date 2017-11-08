@@ -1,6 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import pandas as pd
 
 from msci.utils.animation import RealShoppersAnimation
 
@@ -42,6 +43,43 @@ def plot_path(signal_df, mac_address_df, scatter=True):
     fig.show()
 
 
+def plot_path_inline(signal_df, mac_address_df, ax, scatter=True):
+    """
+    plots paths of list of mac addresses through shopping mall
+
+    :param signal_df: data frame
+    :param mac_address_df: list of mac addresses
+    :param ax: the ax from the figure
+    :param scatter: boolean to allow for scatter or plot
+    :return: None
+    """
+    if type(mac_address_df) == pd.core.frame.DataFrame:
+        signal_group = signal_df[signal_df.mac_address.isin(mac_address_df.mac_address.tolist())].groupby('mac_address')
+    elif (type(mac_address_df) == list) or (type(mac_address_df) == pd.core.series.Series):
+        signal_group = signal_df[signal_df.mac_address.isin(mac_address_df)].groupby('mac_address')
+    elif type(mac_address_df) == str:
+        signal_group = signal_df[signal_df.mac_address == mac_address_df].groupby('mac_address')
+    else:
+        raise Exception('mac_address_df is not a Series, list or str of mac addresses')
+
+    img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
+
+    ax.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
+
+    for title, group in signal_group:
+        if scatter:
+            plt.scatter(group.x, group.y, label=title, s=0.7)
+        else:
+            plt.plot(group.x, group.y, label=title)
+
+    ax.set_title('Stores in Mall of Mauritius')
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    ax.set_xlim((0, 350))
+    ax.set_ylim((0, 200))
+    ax.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1))
+
+
 def plot_points_on_map(x, y):
     fig = plt.figure()
 
@@ -62,10 +100,14 @@ def plot_points_on_map(x, y):
 
 
 def reformat_data(signal_df, mac_address_df):
-    try:
+    if type(mac_address_df) == pd.core.frame.DataFrame:
         selected_signal_df = signal_df[signal_df.mac_address.isin(mac_address_df.mac_address.tolist())]
-    except AttributeError:
+    elif (type(mac_address_df) == list) or (type(mac_address_df) == pd.core.series.Series):
         selected_signal_df = signal_df[signal_df.mac_address.isin(mac_address_df)]
+    elif type(mac_address_df) == str:
+        selected_signal_df = signal_df[signal_df.mac_address == mac_address_df]
+    else:
+        raise Exception('mac_address_df is not a Series, list or str of mac addresses')
 
     selected_signal_df.index = selected_signal_df.date_time
     clean_signal_df = selected_signal_df[['mac_address', 'x', 'y']]
