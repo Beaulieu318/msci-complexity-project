@@ -47,13 +47,13 @@ def plot_path(signal_df, mac_address_df, scatter=True):
     fig.show()
 
 
-def plot_path_jn(signal_df, mac_address_df, ax, scatter=True):
+def plot_path_jn(signal_df, mac_address_df, axes, scatter=True):
     """
     plots paths of list of mac addresses through shopping mall
 
     :param signal_df: data frame
     :param mac_address_df: list of mac addresses
-    :param ax: the ax from the figure
+    :param axes: the ax from the figure
     :param scatter: boolean to allow for scatter or plot
     :return: None
     """
@@ -68,7 +68,7 @@ def plot_path_jn(signal_df, mac_address_df, ax, scatter=True):
 
     img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
 
-    ax.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
+    axes.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
     for title, group in signal_group:
         if scatter:
@@ -76,12 +76,33 @@ def plot_path_jn(signal_df, mac_address_df, ax, scatter=True):
         else:
             plt.plot(group.x, group.y, label=title)
 
-    ax.set_title('Stores in Mall of Mauritius')
-    ax.set_xlabel('x (m)')
-    ax.set_ylabel('y (m)')
-    ax.set_xlim((0, 350))
-    ax.set_ylim((0, 200))
-    ax.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1))
+    axes.set_title('Stores in Mall of Mauritius')
+    axes.set_xlabel('x (m)')
+    axes.set_ylabel('y (m)')
+    axes.set_xlim((0, 350))
+    axes.set_ylim((0, 200))
+    axes.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1))
+
+
+def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
+    """
+    This plots the histogram of mac address against time
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param axes: The figure ax
+    :param minute_resolution: (int) The resolution of the time
+    :param label: (str) The label of the line
+    :return: A plot
+    """
+    signal_df.date_time = signal_df.date_time.dt.round(str(minute_resolution) + 'min')
+    signal_time_df = signal_df.groupby('date_time').mac_address.nunique().to_frame()
+    if label is not None:
+        signal_time_df.rename(columns={'mac_address': label}, inplace=True)
+
+    ax = signal_time_df.plot(ax=axes)
+    ax.set_title('Histogram of mac addresses against time')
+    ax.set_xlabel('Time (hh:mm)')
+    ax.set_ylabel('Count of mac addresses per {} mins (no.)'.format(minute_resolution))
 
 
 def plot_points_on_map(x, y):
