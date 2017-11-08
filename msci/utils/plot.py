@@ -42,6 +42,25 @@ def plot_path(signal_df, mac_address_df, scatter=True):
     fig.show()
 
 
+def plot_points_on_map(x, y):
+    fig = plt.figure()
+
+    img = mpimg.imread("../images/mall_of_mauritius_map.png")
+    plt.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
+
+    for i in range(len(x)):
+        plt.scatter(x[i], y[i])
+        for j in range(len(x[i])):
+            plt.annotate(str(i), (x[i][j], y[i][j]))
+
+    plt.title('Stores in Mall of Mauritius')
+    plt.xlabel('x (m)')
+    plt.ylabel('y (m)')
+    plt.xlim((0, 350))
+    plt.ylim((0, 200))
+    fig.show()
+
+
 def reformat_data(signal_df, mac_address_df):
     try:
         selected_signal_df = signal_df[signal_df.mac_address.isin(mac_address_df.mac_address.tolist())]
