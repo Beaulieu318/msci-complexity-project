@@ -1,6 +1,6 @@
 import os
 
-from msci.cleaning.utils import *
+from msci.utils.utils import *
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
