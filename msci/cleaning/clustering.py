@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn.preprocessing import scale
 from msci.utils import utils
 import msci.utils.plot as pfun
+import time
 
 mac_address_df = pd.read_csv('../data/mac_address_features.csv')
 
