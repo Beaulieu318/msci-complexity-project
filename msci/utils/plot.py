@@ -23,10 +23,14 @@ def plot_path(signal_df, mac_address_df, scatter=True):
     img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
     plt.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
-    try:
+    if type(mac_address_df) == pd.core.frame.DataFrame:
         signal_group = signal_df[signal_df.mac_address.isin(mac_address_df.mac_address.tolist())].groupby('mac_address')
-    except AttributeError:
+    elif (type(mac_address_df) == list) or (type(mac_address_df) == pd.core.series.Series):
         signal_group = signal_df[signal_df.mac_address.isin(mac_address_df)].groupby('mac_address')
+    elif type(mac_address_df) == str:
+        signal_group = signal_df[signal_df.mac_address == mac_address_df].groupby('mac_address')
+    else:
+        raise Exception('mac_address_df is not a Series, list or str of mac addresses')
 
     for title, group in signal_group:
         if scatter:
