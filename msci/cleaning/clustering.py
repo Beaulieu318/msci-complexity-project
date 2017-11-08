@@ -5,6 +5,8 @@ import matplotlib.cm as cm
 from sklearn.cluster import KMeans
 import pandas as pd
 from sklearn.preprocessing import scale
+from msci.utils import utils
+import msci.utils.plot as pfun
 
 mac_address_df = pd.read_csv('../data/mac_address_features.csv')
 
@@ -119,6 +121,84 @@ def plot_3d(sep_clusters):
     fig.show()
 
 
+def identify_duplicate_data(df):
+    df['manufacturer'] = utils.add_device_type_signal(df)
+    macs = df.mac_address.drop_duplicates().tolist()
+    df = df.sort_values('date_time')
+    grouped = df.groupby('mac_address')
+    time_duplicate_boolean = []
+    duplicates = []
+    for mac in macs:
+        print(mac)
+        group = grouped.get_group(mac)
+        times = group.date_time.tolist()
+        time_dup = [times[i] == times[i+1] for i in range(len(times) - 1)]
+        indices = [i for i, x in enumerate(time_dup) if x]
+        dup = time_dup.count(True) >= 1
+        if dup:
+            x = group.x.tolist()
+            y = group.y.tolist()
+            pos_diff = [i for i in indices if (x[i], y[i]) != (x[i+1], y[i+1])]
+            duplicates.append([mac, pos_diff])
+        time_duplicate_boolean.append(dup)
+    duplicate_macs = [macs[i] for i in range(len(macs)) if time_duplicate_boolean[i]]
+    duplicates = [i for i in duplicates if len(i[1]) > 0]
+    return df, duplicate_macs, duplicates
+
+
+def analyse_duplicates(df, duplicate_mac, duplicate_indices, plot=True):
+    grouped = df.groupby('mac_address')
+    group = grouped.get_group(duplicate_mac)
+    times = group.date_time.tolist()
+    pos = list(zip(group.x.tolist(), group.y.tolist()))
+    info = list(zip(times, pos))
+    dup = [(info[i], info[i+1]) for i in duplicate_indices]
+    x = [[i[1][0] for i in j] for j in dup]
+    y = [[i[1][1] for i in j] for j in dup]
+    if plot:
+        pfun.plot_points_on_map(x, y)
+    return dup, x, y
+
+
+def position_difference_analysis(df, duplicates):
+    t0 = time.time()
+    dups = [analyse_duplicates(df, i[0], i[1], plot=False)[0] for i in duplicates[:20]]
+    print(time.time() - t0)
+    distance_dist = []
+    i = 0
+    for dup in dups:
+        print(i)
+        distances = [utils.euclidean_distance(i[0][1], i[1][1]) for i in dup]
+        distance_dist.append(distances)
+        i += 1
+    return distance_dist
+
+
+def identify_data_gaps(df, manufacturer, plot=True):
+    df = df.sort_values('date_time')
+    manufacturer_group = df.groupby('manufacturer').get_group(manufacturer)
+    macs = manufacturer_group.mac_address.drop_duplicates().tolist()
+    grouped = df.groupby(['manufacturer', 'mac_address'])
+    time_interval_data = []
+    for mac in macs:
+        group = grouped.get_group((manufacturer, mac))
+        times = group.date_time.tolist()
+        t_deltas = [utils.time_difference(times[i], times[i+1]) for i in range(len(times) - 1)]
+        time_interval_data.append(t_deltas)
+    if plot:
+        fig = plt.figure()
+        plt.plot([0, 50], [1800, 1800], linestyle='dashed')
+        for mac in time_interval_data[:20]:
+            plt.plot(np.arange(len(mac)), mac)
+        fig.show()
+    return time_interval_data
+
+
+def get_manufacturers_group(df, manufacturer):
+    grouped = df.groupby('manufacturer')
+    return grouped.get_group(manufacturer)
+
+
 def gyration_manufacturer(df, data_type=None, specific_manufacturer='Samsung Electronics Co.,Ltd'):
     manufacturers = df.manufacturer.drop_duplicates().tolist()
     grouped = df.groupby('manufacturer')
@@ -126,6 +206,10 @@ def gyration_manufacturer(df, data_type=None, specific_manufacturer='Samsung Ele
     manufacturers = [manufacturers[i] for i in range(len(manufacturers)) if man_lengths[i] >= 70]
     stationary_manufacturers = [i for i in manufacturers if manufacturers_df[i]]
     moving_manufacturers = [i for i in manufacturers if manufacturers_df[i] is False]
+
+    if data_type is None:
+        manufacturers = stationary_manufacturers
+        fig = plt.figure()
 
     if data_type is 'stationary':
         manufacturers = stationary_manufacturers
@@ -178,3 +262,5 @@ def bar_chart(manufacturers, data, feature):
     ax.set_xticklabels(manufacturers, rotation='vertical')
 
     fig.show()
+
+
