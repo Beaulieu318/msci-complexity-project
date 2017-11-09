@@ -16,7 +16,7 @@ def import_data(mall='Mall of Mauritius'):
 def create_mac_address_df(signal_df):
     mac_addresses = signal_df.mac_address.value_counts()
     mac_address_df = pd.DataFrame(mac_addresses)
-    mac_address_df.rename(columns={'mac_address': 'count'}, inplace=True)
+    mac_address_df.rename(columns={'mac_address': 'frequency'}, inplace=True)
     mac_address_df['mac_address'] = mac_address_df.index
     mac_address_df.reset_index(inplace=True, drop=True)
     return mac_address_df
@@ -47,7 +47,7 @@ def find_device_type(mac_address_df):
     return mac_address_df2['Organization Name']
 
 
-def count_density_variance(signal_df, mac_address_df, minute_resolution):
+def calculate_count_density_variance(signal_df, mac_address_df, minute_resolution=5):
     """
     Bins times into intervals of length 'minute resolution', and finds variance of counts
     :param signal_df: data frame
@@ -60,7 +60,7 @@ def count_density_variance(signal_df, mac_address_df, minute_resolution):
     macs = mac_address_df.mac_address.tolist()
     cdv = []
     for mac in macs:
-        time = signal_mac_group.get_group(mac).date_time.dt.round(minute_resolution + 'min').value_counts()
+        time = signal_mac_group.get_group(mac).date_time.dt.round(str(minute_resolution) + 'min').value_counts()
         count_variance = time.std()
         cdv.append(count_variance)
     return cdv
@@ -125,3 +125,16 @@ def calculate_average_turning_angle(signal_df, mac_address_df):
             av_turning_circle = np.nanmean(rad_angle)
         av_turning_circles.append(av_turning_circle)
     return av_turning_circles
+
+
+def create_mac_address_features(mall, export_location):
+    signal_df = import_data(mall)
+    mac_address_df = create_mac_address_df(signal_df)
+    mac_address_df['radius_of_gyration'] = calculate_radius_gyration(signal_df, mac_address_df)
+    mac_address_df['manufacturer'] = find_device_type(mac_address_df)
+    mac_address_df['count_density_variance'] = calculate_count_density_variance(signal_df, mac_address_df)
+    mac_address_df['length_of_stay'] = calculate_length_of_stay(signal_df, mac_address_df)
+    mac_address_df['is_out_of_hours'] = is_out_of_hours(signal_df, mac_address_df)
+    mac_address_df['average_speed'] = calculate_average_speed(signal_df, mac_address_df)
+    mac_address_df['average_turning_angle'] = calculate_average_turning_angle(signal_df, mac_address_df)
+    mac_address_df.to_csv(export_location, index=False)
