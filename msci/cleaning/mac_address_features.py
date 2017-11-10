@@ -1,16 +1,10 @@
 import os
+import pandas as pd
+import numpy as np
 
-from msci.utils.utils import *
+from msci.utils import utils
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
-
-
-def import_data(mall='Mall of Mauritius'):
-    shopper_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
-    shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
-    signal_df = shopper_df[shopper_df['location'] == mall]
-    return signal_df
 
 
 def create_mac_address_df(signal_df):
@@ -71,7 +65,7 @@ def calculate_length_of_stay(signal_df, mac_address_df):
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     macs = mac_address_df.mac_address.tolist()
     groups = [signal_mac_group.get_group(i).date_time.tolist() for i in macs]
-    time_deltas = [time_difference(i[0], i[-1]) for i in groups]
+    time_deltas = [utils.time_difference(i[0], i[-1]) for i in groups]
     return time_deltas
 
 
@@ -128,7 +122,7 @@ def calculate_average_turning_angle(signal_df, mac_address_df):
 
 
 def create_mac_address_features(mall, export_location):
-    signal_df = import_data(mall)
+    signal_df = utils.import_signals(mall)
     mac_address_df = create_mac_address_df(signal_df)
     mac_address_df['radius_of_gyration'] = calculate_radius_gyration(signal_df, mac_address_df)
     mac_address_df['manufacturer'] = find_device_type(mac_address_df)
