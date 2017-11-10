@@ -129,6 +129,6 @@ def create_mac_address_features(mall, export_location):
     mac_address_df['count_density_variance'] = calculate_count_density_variance(signal_df, mac_address_df)
     mac_address_df['length_of_stay'] = calculate_length_of_stay(signal_df, mac_address_df)
     mac_address_df['is_out_of_hours'] = is_out_of_hours(signal_df, mac_address_df)
-    mac_address_df['average_speed'] = calculate_average_speed(signal_df, mac_address_df)
-    mac_address_df['average_turning_angle'] = calculate_average_turning_angle(signal_df, mac_address_df)
+    mac_address_df['av_speed'] = calculate_average_speed(signal_df, mac_address_df)
+    mac_address_df['av_turning_angle'] = calculate_average_turning_angle(signal_df, mac_address_df)
     mac_address_df.to_csv(export_location, index=False)
