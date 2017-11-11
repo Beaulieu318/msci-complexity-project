@@ -108,7 +108,7 @@ def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
 def plot_points_on_map(x, y):
     fig = plt.figure()
 
-    img = mpimg.imread("../images/mall_of_mauritius_map.png")
+    img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
     plt.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
     for i in range(len(x)):
