@@ -11,6 +11,7 @@ def import_signals(mall='Mall of Mauritius'):
     shopper_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
     shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
     signal_df = shopper_df[shopper_df['location'] == mall]
+    signal_df = shopper_df.sort_values('date_time')
     return signal_df
 
 
