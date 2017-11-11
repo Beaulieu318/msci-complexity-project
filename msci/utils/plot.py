@@ -148,7 +148,11 @@ def _create_group(items):
     return values
 
 
-def animate(signal_df, mac_address_df):
+def animate(signal_df, mac_address_df, jn=False):
     shoppers_history = reformat_data(signal_df, mac_address_df)
     anim = RealShoppersAnimation(shoppers_history, 100)
-    return anim.run()
+    if jn:
+        return anim.run()
+    else:
+        a = anim.run()
+        plt.show()
