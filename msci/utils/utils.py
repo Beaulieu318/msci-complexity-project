@@ -11,7 +11,7 @@ def import_signals(mall='Mall of Mauritius'):
     shopper_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
     shopper_df.date_time = shopper_df.date_time.astype('datetime64[ns]')
     signal_df = shopper_df[shopper_df['location'] == mall]
-    signal_df = shopper_df.sort_values('date_time')
+    signal_df = signal_df.sort_values('date_time')
     return signal_df
 
 
@@ -27,6 +27,10 @@ def df_to_csv(df, name, sort=False):
         mac_group.to_csv(path_or_buf=dir_path + '/../data/clean_data_' + name + '.csv', columns=COLUMNS_TO_IMPORT, index=False)
     else:
         df.to_csv(path_or_buf=dir_path + '/../data/clean_data_' + name + '.csv', columns=COLUMNS_TO_IMPORT, index=False)
+
+
+def reduce_df(df, mac_list):
+    return df[df.mac_address.isin(mac_list)]
 
 
 def euclidean_distance(xy1, xy2):
