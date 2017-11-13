@@ -8,8 +8,12 @@ from sklearn.preprocessing import scale
 from msci.utils import utils
 import msci.utils.plot as pfun
 import time
+import os
+import math
 
-mac_address_df = pd.read_csv('../data/mac_address_features.csv')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+mac_address_df = pd.read_csv(dir_path + '/../data/mac_address_features.csv')
 
 mac_address_clean_df = mac_address_df.dropna()
 
@@ -147,9 +151,9 @@ def identify_duplicate_data(df):
     return df, duplicate_macs, duplicates
 
 
-def analyse_duplicates(df, duplicate_mac, duplicate_indices, plot=True):
-    grouped = df.groupby('mac_address')
-    group = grouped.get_group(duplicate_mac)
+def analyse_duplicates(grouped_df, duplicate_mac, duplicate_indices, plot=True):
+    #grouped = df.groupby('mac_address')
+    group = grouped_df.get_group(duplicate_mac)
     times = group.date_time.tolist()
     pos = list(zip(group.x.tolist(), group.y.tolist()))
     info = list(zip(times, pos))
@@ -161,18 +165,49 @@ def analyse_duplicates(df, duplicate_mac, duplicate_indices, plot=True):
     return dup, x, y
 
 
-def position_difference_analysis(df, duplicates):
+def duplicate_point_continuity(df, duplicate_mac, duplicate_indices):
+    ind = duplicate_indices
+    grouped = df.groupby('mac_address')
+    group = grouped.get_group(duplicate_mac)
+    times = group.date_time.tolist()
+    time_cont = [times[i-1:i+3] for i in ind]
+    pos = list(zip(group.x.tolist(), group.y.tolist()))
+    pos_cont = [pos[i-1:i+3] for i in ind]
+    vel_cont = []
+    for i in range(len(ind)):
+        euc = np.array([utils.euclidean_distance(pos_cont[i][j], pos_cont[i][j+1]) for j in range(len(pos_cont[i]) - 1)])
+        time_diff = np.array([utils.time_difference(time_cont[i][j], time_cont[i][j+1]) for j in range(len(time_cont[i]) - 1)])
+        vel_cont.append(euc/time_diff)
+    group_euc = np.array([utils.euclidean_distance(pos[i], pos[i+1]) for i in range(len(pos) - 1)])
+    group_td = np.array([utils.time_difference(times[i], times[i+1]) for i in range(len(times) - 1)])
+    group_velocity = group_euc/group_td
+    group_velocity = [group_velocity[i] for i in range(len(group_velocity)) if i not in ind]
+    group_velocity = np.trim_zeros(np.array([i for i in group_velocity if np.isnan(i) == False]))
+    return time_cont, pos_cont, vel_cont, group_velocity
+
+
+def position_difference_analysis(df, duplicates, distances=False):
+    grouped = df.grouby('mac_address')
     t0 = time.time()
-    dups = [analyse_duplicates(df, i[0], i[1], plot=False)[0] for i in duplicates[:20]]
+    dups = [analyse_duplicates(grouped, i[0], i[1], plot=False)[0] for i in duplicates[:200]]
     print(time.time() - t0)
     distance_dist = []
-    i = 0
-    for dup in dups:
-        print(i)
-        distances = [utils.euclidean_distance(i[0][1], i[1][1]) for i in dup]
-        distance_dist.append(distances)
-        i += 1
-    return distance_dist
+    if distances:
+        for dup in dups:
+            distances = [utils.euclidean_distance(i[0][1], i[1][1]) for i in dup]
+            distance_dist.append(distances)
+        return distance_dist
+    else:
+        return dups
+
+
+def duplicate_by_manufacturer(df, duplicate_macs):
+    df = df[df.mac_address.isin(duplicate_macs)]
+    grouped = df.groupby('mac_address')
+    groups = [grouped.get_group(i) for i in duplicate_macs]
+    print('d')
+    manufacturers = [i.manufacturer.drop_duplicates().tolist() for i in groups]
+    return groups, manufacturers
 
 
 def identify_data_gaps(df, manufacturer, plot=True):
