@@ -5,11 +5,11 @@ import matplotlib.cm as cm
 from sklearn.cluster import KMeans
 import pandas as pd
 from sklearn.preprocessing import scale
-from msci.utils import utils
 import msci.utils.plot as pfun
+from msci.utils import utils
 import time
 import os
-import math
+from collections import defaultdict
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -152,7 +152,6 @@ def identify_duplicate_data(df):
 
 
 def analyse_duplicates(grouped_df, duplicate_mac, duplicate_indices, plot=True):
-    #grouped = df.groupby('mac_address')
     group = grouped_df.get_group(duplicate_mac)
     times = group.date_time.tolist()
     pos = list(zip(group.x.tolist(), group.y.tolist()))
@@ -199,6 +198,52 @@ def position_difference_analysis(df, duplicates, distances=False):
         return distance_dist
     else:
         return dups
+
+
+def duplicate_fill(df, largest_separation):
+    """
+    function to account for data points that have identical times but different positions
+    if discrepancy in position is greater than 'largest_separation', the position that minimises the deviation from
+    path is kept. if discrepancy is less the 'largest_separation', the average of the positions is used.
+    :param df: dirty data frame
+    :param largest_separation: largest distance threshold for analysis
+    :return: data frame containing new data
+    """
+    all_macs = df.mac_address.drop_duplicates().tolist()
+    print(len(all_macs))
+    grouped = df.groupby('mac_address')
+    groups = [grouped.get_group(i) for i in all_macs]
+    new_data = []
+    for g in range(len(groups)):
+        times = groups[g].date_time.tolist()
+        d = defaultdict(list)
+        for i, item in enumerate(times):
+            d[item].append(i)
+        d = {k: v for k, v in d.items() if len(v) > 1}
+        if len(d) > 0:
+            x = groups[g].x.tolist()
+            y = groups[g].y.tolist()
+            pos = list(zip(x, y))
+            for entry in d:
+                pos_dups = [pos[i] for i in d[entry]]
+                eucs = [utils.euclidean_distance(pos_dups[i], pos_dups[i+1]) for i in range(len(pos_dups) - 1)]
+                euc_greater = [i for i in eucs if i > largest_separation]
+                if len(euc_greater) > 0:
+                    if len(pos) > d[entry][-1] + 2:
+                        dists = [np.mean([utils.euclidean_distance(pos[d[entry][0]-1], j),
+                                          utils.euclidean_distance(pos[d[entry][-1]+2], j)]) for j in pos_dups]
+                        new_pos = pos_dups[np.argmin(dists)]
+                    else:
+                        dists = [utils.euclidean_distance(pos[d[entry][0] - 1], j) for j in pos_dups]
+                        new_pos = pos_dups[np.argmin(dists)]
+                else:
+                    pos_dups_zip = list(zip(*pos_dups))
+                    new_pos = (np.mean(pos_dups_zip[0]), np.mean(pos_dups_zip[1]))
+                d[entry] = new_pos
+        mac = all_macs[g]
+        for i in d:
+            new_data.append([mac, i, d[i][0], d[i][1]])
+    return pd.DataFrame(new_data, columns=['mac address', 'date_time', 'x_new', 'y_new'])
 
 
 def duplicate_by_manufacturer(df, duplicate_macs):
