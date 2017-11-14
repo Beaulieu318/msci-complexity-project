@@ -61,3 +61,17 @@ def add_device_type_signal(signal_df):
     signal_df2['mac_address_short'] = signal_df2.mac_address.str.replace(':', '').str.upper().str[:6]
     signal_df2 = signal_df2.merge(mac_cross_reference_df, how='left', left_on='mac_address_short', right_on='Assignment')
     return signal_df2['Organization Name'].tolist()
+
+
+def bayes_bool(result, likelihood, prior):
+    """
+
+    :param result: (np.array) The boolean result (1 or 0) of result of the function
+    :param likelihood: (float) The probability that the result is going to be true
+    :param prior: (np.array) The initial probability estimate
+    :return: (np.array) The posterior which is the updated estimate of the probability given the result of the function
+    """
+    func_probabilities = np.array([likelihood[0], likelihood[1]])
+    macs_likelihood = func_probabilities[result]
+    posterior = (macs_likelihood * prior)
+    return posterior

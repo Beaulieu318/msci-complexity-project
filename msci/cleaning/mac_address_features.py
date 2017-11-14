@@ -121,6 +121,14 @@ def calculate_average_turning_angle(signal_df, mac_address_df):
     return av_turning_circles
 
 
+def add_probability_columns(mac_address_df):
+    mac_address_df['shopper'] = 0.25
+    mac_address_df['mall_worker'] = 0.25
+    mac_address_df['stationary_device'] = 0.25
+    mac_address_df['other'] = 0.25
+    mac_address_df['resolved'] = False
+
+
 def create_mac_address_features(mall, export_location):
     signal_df = utils.import_signals(mall)
     mac_address_df = create_mac_address_df(signal_df)
@@ -131,4 +139,5 @@ def create_mac_address_features(mall, export_location):
     mac_address_df['is_out_of_hours'] = is_out_of_hours(signal_df, mac_address_df)
     mac_address_df['av_speed'] = calculate_average_speed(signal_df, mac_address_df)
     mac_address_df['av_turning_angle'] = calculate_average_turning_angle(signal_df, mac_address_df)
+    add_probability_columns(mac_address_df)
     mac_address_df.to_csv(export_location, index=False)
