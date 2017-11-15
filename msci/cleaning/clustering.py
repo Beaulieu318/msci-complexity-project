@@ -17,35 +17,35 @@ mac_address_df = pd.read_csv(dir_path + '/../data/mac_address_features.csv')
 
 mac_address_clean_df = mac_address_df.dropna()
 
-samples = mac_address_clean_df.as_matrix(columns=['gyration', 'cdv', 'length_of_stay'])
-samples_scaled = scale(samples)
+# samples = mac_address_clean_df.as_matrix(columns=['gyration', 'cdv', 'length_of_stay'])
+# samples_scaled = scale(samples)
 
 manufacturers_df = {
     'HUAWEI TECHNOLOGIES CO.,LTD': False,
-     'Xiaomi Communications Co Ltd': False,
-     'Samsung Electronics Co.,Ltd': False,
-     'Ruckus Wireless': True,
-     'SAMSUNG ELECTRO-MECHANICS(THAILAND)': False,
-     'HTC Corporation': False,
-     'LG Electronics (Mobile Communications)': False,
-     'Intel Corporate': True,
-     'Hon Hai Precision Ind. Co.,Ltd.': True,
-     'Murata Manufacturing Co., Ltd.': True,
-     'TCT mobile ltd': False,
-     'Apple, Inc.': False,
-     'Motorola (Wuhan) Mobility Technologies Communication Co., Ltd.': False,
-     'Ubiquiti Networks Inc.': True,
-     'Sony Mobile Communications AB': False,
-     'InPro Comm': True,
-     'SAMSUNG ELECTRO MECHANICS CO., LTD.': False,
-     'Microsoft Corporation': False,
-     'Nokia Corporation': False,
-     'Lenovo Mobile Communication Technology Ltd.': False,
-     'BlackBerry RTS': False,
-     'WISOL': False,
-     'Motorola Mobility LLC, a Lenovo Company': False,
-     'Microsoft Mobile Oy': False
-    }
+    'Xiaomi Communications Co Ltd': False,
+    'Samsung Electronics Co.,Ltd': False,
+    'Ruckus Wireless': True,
+    'SAMSUNG ELECTRO-MECHANICS(THAILAND)': False,
+    'HTC Corporation': False,
+    'LG Electronics (Mobile Communications)': False,
+    'Intel Corporate': True,
+    'Hon Hai Precision Ind. Co.,Ltd.': True,
+    'Murata Manufacturing Co., Ltd.': True,
+    'TCT mobile ltd': False,
+    'Apple, Inc.': False,
+    'Motorola (Wuhan) Mobility Technologies Communication Co., Ltd.': False,
+    'Ubiquiti Networks Inc.': True,
+    'Sony Mobile Communications AB': False,
+    'InPro Comm': True,
+    'SAMSUNG ELECTRO MECHANICS CO., LTD.': False,
+    'Microsoft Corporation': False,
+    'Nokia Corporation': False,
+    'Lenovo Mobile Communication Technology Ltd.': False,
+    'BlackBerry RTS': False,
+    'WISOL': False,
+    'Motorola Mobility LLC, a Lenovo Company': False,
+    'Microsoft Mobile Oy': False
+}
 
 
 def df_to_matrix(df, columns=['gyration', 'cdv', 'length_of_stay', 'cluster']):
@@ -205,9 +205,9 @@ def duplicate_fill(df, largest_separation):
     function to account for data points that have identical times but different positions
     if discrepancy in position is greater than 'largest_separation', the position that minimises the deviation from
     path is kept. if discrepancy is less the 'largest_separation', the average of the positions is used.
-    :param df: dirty data frame
-    :param largest_separation: largest distance threshold for analysis
-    :return: data frame containing new data
+    :param df: (pd.DataFrame) dirty data frame
+    :param largest_separation: (int) largest distance threshold for analysis
+    :return: (pd.DataFrame) the original DataFrame without two location at the same time
     """
     all_macs = df.mac_address.drop_duplicates().tolist()
     print(len(all_macs))
@@ -243,8 +243,18 @@ def duplicate_fill(df, largest_separation):
         mac = all_macs[g]
         for i in d:
             new_data.append([mac, i, d[i][0], d[i][1]])
+
     new_df = pd.DataFrame(new_data, columns=['mac_address', 'date_time', 'x_new', 'y_new'])
     merged_df = df.merge(new_df, how='left', on=['mac_address', 'date_time'])
+
+    new_coordinate_mask = merged_df.x_new.notnull()
+    merged_df.loc[new_coordinate_mask, 'x'] = merged_df.loc[new_coordinate_mask, 'x_new']
+    merged_df.loc[new_coordinate_mask, 'y'] = merged_df.loc[new_coordinate_mask, 'y_new']
+    unique_columns = ['mac_address', 'date_time', 'location', 'x', 'y']
+    merged_df.drop_duplicates(subset=unique_columns, inplace=True)
+    merged_df.reset_index(inplace=True)
+    del merged_df['x_new']
+    del merged_df['y_new']
     return merged_df
 
 
@@ -345,5 +355,3 @@ def bar_chart(manufacturers, data, feature):
     ax.set_xticklabels(manufacturers, rotation='vertical')
 
     fig.show()
-
-
