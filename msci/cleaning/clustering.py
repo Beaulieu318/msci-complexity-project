@@ -258,6 +258,36 @@ def duplicate_fill(df, largest_separation):
     return merged_df
 
 
+def higher_order_duplicate_fill(df, velocity_limit, triangulation_error):
+    all_macs = df.mac_address.drop_duplicates().tolist()
+    print(len(all_macs))
+    grouped = df.groupby('mac_address')
+    groups = [grouped.get_group(i) for i in all_macs]
+    time_culprits = []
+    time_culprits_error = []
+    for g in range(len(groups)):
+        ts = []
+        ts_error = []
+        x = groups[g].x.tolist()
+        y = groups[g].y.tolist()
+        pos = list(zip(x, y))
+        times = groups[g].date_time.tolist()
+        delta_t = np.array([utils.time_difference(times[i], times[i+1]) for i in range(len(times)-1)])
+        euclideans = np.array([utils.euclidean_distance(pos[i], pos[i + 1]) for i in range(len(pos) - 1)])
+        euclideans_error = euclideans - 2*triangulation_error*np.ones(len(euclideans))
+        velocities = euclideans/delta_t
+        velocities_error = euclideans_error/delta_t
+        for v in range(len(velocities)):
+            if velocities[v] > velocity_limit:
+                ts.append((delta_t[v], times[v], times[v+1], pos[v], pos[v+1]))
+        time_culprits.append(ts)
+        for v in range(len(velocities)):
+            if velocities_error[v] > velocity_limit:
+                ts_error.append(velocities_error[v])
+        time_culprits_error.append(ts_error)
+    return time_culprits, time_culprits_error
+
+
 def duplicate_by_manufacturer(df, duplicate_macs):
     df = df[df.mac_address.isin(duplicate_macs)]
     grouped = df.groupby('mac_address')
