@@ -243,7 +243,9 @@ def duplicate_fill(df, largest_separation):
         mac = all_macs[g]
         for i in d:
             new_data.append([mac, i, d[i][0], d[i][1]])
-    return pd.DataFrame(new_data, columns=['mac address', 'date_time', 'x_new', 'y_new'])
+    new_df = pd.DataFrame(new_data, columns=['mac_address', 'date_time', 'x_new', 'y_new'])
+    merged_df = df.merge(new_df, how='left', on=['mac_address', 'date_time'])
+    return merged_df
 
 
 def duplicate_by_manufacturer(df, duplicate_macs):
