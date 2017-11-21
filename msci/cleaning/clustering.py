@@ -263,6 +263,9 @@ def higher_order_duplicate_fill(df, velocity_limit, triangulation_error):
     print(len(all_macs))
     grouped = df.groupby('mac_address')
     groups = [grouped.get_group(i) for i in all_macs]
+    macs = [all_macs[i] for i in range(len(all_macs)) if len(groups[i]) > 1]
+    groups = [g for g in groups if len(g) > 1]
+    print(len(groups))
     time_culprits = []
     time_culprits_error = []
     for g in range(len(groups)):
@@ -283,9 +286,64 @@ def higher_order_duplicate_fill(df, velocity_limit, triangulation_error):
         time_culprits.append(ts)
         for v in range(len(velocities)):
             if velocities_error[v] > velocity_limit:
-                ts_error.append(velocities_error[v])
-        time_culprits_error.append(ts_error)
-    return time_culprits, time_culprits_error
+                ts_error.append(v)
+        if len(ts_error) > 1:
+            time_culprits_error.append([macs[g], ts_error, len(groups[g]), groups[g].mac_address.unique()])
+    return time_culprits_error
+
+
+def plot_unrealistic_speeds(df, ht):
+    grouped = df.groupby('mac_address')
+    macs = [i[0] for i in ht]
+    groups = [grouped.get_group(i) for i in macs]
+    groups = [g for g in groups if len(g) > 1]
+    xs = []
+    ys = []
+    for g in range(len(groups)):
+        print(g)
+        x = groups[g].x.tolist()
+        y = groups[g].y.tolist()
+        x = [x[i] for i in range(len(x)) if i in ht[0][g][1]]
+        y = [y[i] for i in range(len(y)) if i in ht[0][g][1]]
+        xs.append(x)
+        ys.append(y)
+    pfun.plot_points_on_map(xs, ys)
+
+
+def store_id_unrealistic_v(df, ht):
+    grouped = df.groupby('mac_address')
+    groups = [grouped.get_group(i[0]) for i in ht]
+    sid = []
+    count = []
+    for g in range(len(groups)):
+        count.append(len(groups[g]))
+        stores = groups[g].store_id.tolist()
+        stores_v = []
+        for i in range(len(stores)):
+            if i in ht[g][1]:
+                stores_v.append(stores[i-1])
+                stores_v.append(stores[i])
+                stores_v.append(stores[i+1])
+        sid.append([ht[g][0], stores_v])
+    nancount = [i[1].count(np.nan)/len(i[1]) for i in sid]
+    return sid, nancount, count
+
+
+def plot_nan(df):
+    grouped = df.groupby('mac_address')
+    macs = df.mac_address.drop_duplicates().tolist()
+    groups = [grouped.get_group(i) for i in macs]
+    xs = []
+    ys = []
+    for g in groups:
+        x = g.x.tolist()
+        y = g.y.tolist()
+        stores = g.store_id.tolist()
+        x = [x[i] for i in range(len(x)) if stores[i] is np.nan]
+        y = [y[i] for i in range(len(y)) if stores[i] is np.nan]
+        xs.append(x)
+        ys.append(y)
+    return xs, ys
 
 
 def duplicate_by_manufacturer(df, duplicate_macs):
