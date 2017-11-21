@@ -105,7 +105,7 @@ def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
     ax.set_ylabel('Count of mac addresses per {} mins (no.)'.format(minute_resolution))
 
 
-def plot_points_on_map(x, y):
+def plot_points_on_map(x, y, label=False):
     fig = plt.figure()
 
     img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
@@ -113,8 +113,9 @@ def plot_points_on_map(x, y):
 
     for i in range(len(x)):
         plt.scatter(x[i], y[i])
-        for j in range(len(x[i])):
-            plt.annotate(str(i), (x[i][j], y[i][j]))
+        if label:
+            for j in range(len(x[i])):
+                plt.annotate(str(i), (x[i][j], y[i][j]))
 
     plt.title('Stores in Mall of Mauritius')
     plt.xlabel('x (m)')
