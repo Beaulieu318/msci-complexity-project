@@ -98,7 +98,7 @@ def calculate_average_speed(signal_df, mac_address_df):
     return av_speeds
 
 
-def calculate_average_turning_angle(signal_df, mac_address_df):
+def calculate_turning_angle(signal_df, mac_address_df):
     macs = mac_address_df.mac_address.tolist()
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
@@ -106,13 +106,15 @@ def calculate_average_turning_angle(signal_df, mac_address_df):
     dot = lambda vec1, vec2: vec1[:, 0] * vec2[:, 0] + vec1[:, 1] * vec2[:, 1]
     mod = lambda vec: np.sqrt(vec[:, 0] ** 2 + vec[:, 1] ** 2)
 
-    av_turning_angle = []
-    av_turning_angle_velocity = []
+    av_turning_angles = []
+    total_turning_angles = []
+    av_turning_angle_velocities = []
     for mac in macs:
         mac_signals_df = signal_mac_group.get_group(mac)
 
-        turning_angle = np.nan
-        turning_angle_velocity = np.nan
+        av_turning_angle = np.nan
+        av_turning_angle_velocity = np.nan
+        total_turning_angle = np.nan
 
         if len(mac_signals_df) > 2:
             columns_to_diff = ['x', 'y']
@@ -122,16 +124,18 @@ def calculate_average_turning_angle(signal_df, mac_address_df):
             v = vectors[:-1]
             cos_angle = dot(u, v) / (mod(u) * mod(v))
             mac_turning_angles = np.arccos(cos_angle)
-            turning_angle = np.nanmean(mac_turning_angles)
+            av_turning_angle = np.nanmean(mac_turning_angles)
+            total_turning_angle = np.nansum(np.abs(mac_turning_angles))
 
             if len(mac_turning_angles) > 1:
                 mac_turning_angle_velocities = np.array(mac_turning_angles)[1:] - np.array(mac_turning_angles[:-1])
-                turning_angle_velocity = np.nanmean(mac_turning_angle_velocities)
+                av_turning_angle_velocity = np.nanmean(mac_turning_angle_velocities)
 
-        av_turning_angle.append(turning_angle)
-        av_turning_angle_velocity.append(turning_angle_velocity)
+        av_turning_angles.append(av_turning_angle)
+        total_turning_angles.append(total_turning_angle)
+        av_turning_angle_velocities.append(av_turning_angle_velocity)
 
-    return av_turning_angle, av_turning_angle_velocity
+    return av_turning_angles, total_turning_angles, av_turning_angle_velocities
 
 
 def calculate_path_length(signal_df, mac_address_df):
@@ -141,22 +145,55 @@ def calculate_path_length(signal_df, mac_address_df):
 
     mod = lambda vec: np.sqrt(vec[:, 0] ** 2 + vec[:, 1] ** 2)
 
-    av_path_length = []
+    av_path_lengths = []
+    total_path_lengths = []
     for mac in macs:
         mac_signals_df = signal_mac_group.get_group(mac)
 
-        path_length = np.nan
+        av_path_length = np.nan
+        total_path_length = np.nan
 
         if len(mac_signals_df) > 1:
             columns_to_diff = ['x', 'y']
             coords = mac_signals_df[columns_to_diff].as_matrix()
             vectors = coords[1:] - coords[:-1]
             mac_path_lengths = mod(vectors)
-            path_length = np.nanmean(mac_path_lengths)
+            av_path_length = np.nanmean(mac_path_lengths)
+            total_path_length = np.nansum(mac_path_lengths)
 
-        av_path_length.append(path_length)
+        av_path_lengths.append(av_path_length)
+        total_path_lengths.append(total_path_length)
 
-    return av_path_length
+    return av_path_lengths, total_path_lengths
+
+
+def calculate_straightness(signal_df, mac_address_df):
+    macs = mac_address_df.mac_address.tolist()
+    signal_sorted_df = signal_df.sort_values('date_time')
+    signal_mac_group = signal_sorted_df.groupby('mac_address')
+
+    mod = lambda vec: np.sqrt(vec[:, 0] ** 2 + vec[:, 1] ** 2)
+
+    av_straightnesses = []
+    for mac in macs:
+        mac_signals_df = signal_mac_group.get_group(mac)
+
+        av_straightness = np.nan
+
+        if len(mac_signals_df) > 2:
+            columns_to_diff = ['x', 'y']
+            coords = mac_signals_df[columns_to_diff].as_matrix()
+            vectors = coords[1:] - coords[:-1]
+            u = vectors[1:]
+            v = vectors[:-1]
+            t = coords[2:] - coords[:-2]
+            mac_path_lengths = (mod(u) + mod(v)) / mod(t)
+            mac_path_lengths = mac_path_lengths[np.isfinite(mac_path_lengths)]
+            av_straightness = np.nanmean(mac_path_lengths)
+
+        av_straightnesses.append(av_straightness)
+
+    return av_straightnesses
 
 
 def add_probability_columns(mac_address_df):
@@ -167,17 +204,27 @@ def add_probability_columns(mac_address_df):
     mac_address_df['resolved'] = False
 
 
-def create_mac_address_features(mall, export_location):
+def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
     signal_df = utils.import_signals(mall)
     mac_address_df = create_mac_address_df(signal_df)
-    mac_address_df['radius_of_gyration'] = calculate_radius_gyration(signal_df, mac_address_df)
+    mac_address_df['centroid'], \
+        mac_address_df['radius_of_gyration'] = \
+        calculate_radius_gyration(signal_df, mac_address_df)
     mac_address_df['manufacturer'] = find_device_type(mac_address_df)
     mac_address_df['count_density_variance'] = calculate_count_density_variance(signal_df, mac_address_df)
     mac_address_df['length_of_stay'] = calculate_length_of_stay(signal_df, mac_address_df)
     mac_address_df['is_out_of_hours'] = is_out_of_hours(signal_df, mac_address_df)
     mac_address_df['av_speed'] = calculate_average_speed(signal_df, mac_address_df)
-    mac_address_df['av_turning_angle'], mac_address_df['av_turning_angle_velocity'] = \
-        calculate_average_turning_angle(signal_df, mac_address_df)
+    mac_address_df['av_turning_angle'], \
+        mac_address_df['total_turning_angle'], \
+        mac_address_df['av_turning_angle_velocity'] = \
+        calculate_turning_angle(signal_df, mac_address_df)
+    mac_address_df['av_path_length'], \
+        mac_address_df['total_path_length'] = \
+        calculate_path_length(signal_df, mac_address_df)
+    mac_address_df['av_straightness'] = calculate_straightness(signal_df, mac_address_df)
     add_probability_columns(mac_address_df)
-    mac_address_df['av_path_length'] = calculate_path_length(signal_df, mac_address_df)
-    mac_address_df.to_csv(export_location, index=False)
+    if export_location:
+        mac_address_df.to_csv(export_location, index=False)
+    else:
+        return mac_address_df
