@@ -14,8 +14,8 @@ def bayes_array(data, prior, likelihood):
     :param likelihood: (function)
     :return:
     """
-    likelihoods_stationary = np.array([likelihood(i, 'stationary') for i in data])
-    likelihoods_shopper = np.array([likelihood(i, 'shopper') for i in data])
+    likelihoods_stationary = np.array([likelihood[0](i) for i in data])
+    likelihoods_shopper = np.array([likelihood[1](i) for i in data])
     posterior_stationary = [i[0]*j for (i,j) in list(zip(prior, likelihoods_stationary))]
     posterior_shopper = [i[1] * j for (i, j) in list(zip(prior, likelihoods_shopper))]
     normal_posterior = [i/np.sum(i) for i in list(zip(posterior_stationary, posterior_shopper))]
@@ -40,52 +40,38 @@ Likelihood Functions
 """
 
 
-def likelihood(mac_address_df, feature, is_out_of_hours):
+def likelihood_function_generator(mac_address_df, feature, dev_type):
     """
     Calculates the likelihood function of a feature given that is in or out of hours
 
     :param mac_address_df: (pd.DataFrame) Contains the mac address features
     :param feature: (str) The feature which the likelihood is calculated from
-    :param is_out_of_hours: (1 or 0) Whether the mac address is out of hours
+    :param dev_type: (string) type of device: whether the mac address is out of hours i.e. stationary
     :return: (function) The pdf of the likelihood function
     """
-    values = mac_address_df[mac_address_df.is_out_of_hours == is_out_of_hours][feature].values.ravel()
+    mac_address_high_count_df = mac_address_df[mac_address_df.frequency > 10]
+    if dev_type == 'stationary':
+        values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 1][feature].values.ravel()
+    if dev_type == 'shopper':
+        values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 0][feature].values.ravel()
     values = values[np.isfinite(values)]
     return stats.kde.gaussian_kde(values)
 
 
-def length_of_stay(length, dev_type, plot=False):
+def likelihood_dictionary(feature_df, feature_list):
     """
-    likelihood function for the length of stay of a device
+    generates a dictionary of likelihood functions for each feature in feature_list
 
-    :param length: (int) length of stay in seconds
-    :param dev_type: (string) device type to be tested e.g. stationary
-    :param plot: (boolean) plot or no plot
-    :return: (float) likelihood
+    :param feature_df: (df) data frame of observable measures
+    :param feature_list: (list of strings) features measured
+    :return: (dictionary) of likelihood functions
     """
-    type_data = {'stationary': [23*60*60, 1*60*60], 'shopper': [2*60*60, 8*60*60], 'worker': []}
-    mu = type_data[dev_type][0]
-    sigma = type_data[dev_type][1]
-    if plot:
-        plot_dist(mu, sigma, 'Length of Stay (s)')
-    return np.exp(-(length - mu)**2/(2*sigma**2))/np.sqrt(2*math.pi*sigma)
-
-
-def radius_likelihood(r_g, dev_type, plot=False):
-    """
-    likelihood function for the length of stay of a device
-
-    :param r_g: (float) radius of gyration for path
-    :param dev_type: (string) device type to be tested e.g. stationary
-    :param plot: (boolean) plot or no plot
-    :return: (float) likelihood
-    """
-    type_data = {'stationary': [4, 8], 'shopper': [40, 20], 'worker': []}
-    mu = type_data[dev_type][0]
-    sigma = type_data[dev_type][1]
-    if plot:
-        plot_dist(mu, sigma, 'Radius of Gyration')
-    return np.exp(-(r_g - mu) ** 2 /(2*sigma**2))/np.sqrt(2*math.pi*sigma)
+    feature_likelihoods = {}
+    for feature in feature_list:
+        feature_likelihoods[feature] = [
+            likelihood_function_generator(feature_df, feature, dev_type='stationary'),
+            likelihood_function_generator(feature_df, feature, dev_type='shopper')]
+    return feature_likelihoods
 
 
 """
@@ -93,7 +79,7 @@ Analysis
 """
 
 
-def sequential(feature_list, priors, feature_df):
+def sequential(priors, feature_df, feature_list):
     """
     applies bayes_array in sequence for a range of observables
 
@@ -102,12 +88,12 @@ def sequential(feature_list, priors, feature_df):
     :param feature_df: data frame
     :return: array of posteriors
     """
-    feature_likelihoods = {'length_of_stay': [length_of_stay], 'gyration': [radius_likelihood]}
+    feature_likelihoods = likelihood_dictionary(feature_df, feature_list)
     prob_estimates = [priors]
     for feature in feature_list:
         data = feature_df[feature].tolist()
-        likelihood = feature_likelihoods[feature][0]
-        posterior = bayes_array(data, prob_estimates[-1], likelihood)
+        likelihood = feature_likelihoods[feature]
+        posterior = bayes_array(data[:200], prob_estimates[-1], likelihood)
         prob_estimates.append(posterior)
     return np.array(prob_estimates)
 
@@ -124,12 +110,12 @@ def plot_probability_trace(prob_estimates, feature_list):
     plt.ylim((0,1))
     plt.title('Sequential Bayesian Inference for Device Classification')
     plt.setp(axes, xticks=range(len(feature_list)), xticklabels=feature_list)
-    for mac in range(len(prob_estimates[0][:100])):
+    for mac in range(len(prob_estimates[0][:200])):
         y = []
         for i in range(len(feature_list)):
             y.append(prob_estimates[i][mac][0])
         axes[0].plot(range(len(feature_list)), y)
-    for mac in range(len(prob_estimates[0][:100])):
+    for mac in range(len(prob_estimates[0][:200])):
         y = []
         for i in range(len(feature_list)):
             y.append(prob_estimates[i][mac][1])
@@ -137,7 +123,7 @@ def plot_probability_trace(prob_estimates, feature_list):
     axes[0].set_xlabel('Feature Sequence', fontsize=20)
     axes[0].set_ylabel('P(Stationary)')
     axes[1].set_xlabel('Feature Sequence', fontsize=20)
-    axes[1].set_ylabel('P(Stationary)')
+    axes[1].set_ylabel('P(Shopper)')
     fig.tight_layout()
     fig.show()
 
