@@ -79,15 +79,16 @@ Analysis
 """
 
 
-def sequential(priors, feature_df, feature_list):
+def sequential(prior, feature_df, feature_list):
     """
     applies bayes_array in sequence for a range of observables
 
     :param feature_list: (list of strings) list of features to be tested
-    :param priors: (array) list of initial priors
+    :param prior: (float) initial P(stationary)
     :param feature_df: data frame
     :return: array of posteriors
     """
+    priors = prior_generator(prior, len(feature_df))
     feature_likelihoods = likelihood_dictionary(feature_df, feature_list)
     prob_estimates = [priors]
     for feature in feature_list:
