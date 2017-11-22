@@ -1,6 +1,7 @@
 import msci.utils.plot as pfun
 from msci.utils import utils
 import numpy as np
+import scipy.stats as stats
 import math
 import matplotlib.pyplot as plt
 
@@ -37,6 +38,20 @@ def prior_generator(p_stationary, mac_length):
 """
 Likelihood Functions
 """
+
+
+def likelihood(mac_address_df, feature, is_out_of_hours):
+    """
+    Calculates the likelihood function of a feature given that is in or out of hours
+
+    :param mac_address_df: (pd.DataFrame) Contains the mac address features
+    :param feature: (str) The feature which the likelihood is calculated from
+    :param is_out_of_hours: (1 or 0) Whether the mac address is out of hours
+    :return: (function) The pdf of the likelihood function
+    """
+    values = mac_address_df[mac_address_df.is_out_of_hours == is_out_of_hours][feature].values.ravel()
+    values = values[np.isfinite(values)]
+    return stats.kde.gaussian_kde(values)
 
 
 def length_of_stay(length, dev_type, plot=False):
