@@ -232,3 +232,27 @@ def ks_results(feature_df, feature_list, statistic=True):
     fig.tight_layout()
     fig.show()
     return ks
+
+
+def kde_test(feature_df, feature, dev_type):
+    """
+    compares the kde fit function to the numerical pdf generated from data
+
+    :param feature_df: mac address data frame
+    :param feature: feature tested
+    :param dev_type: stationary or shopper
+    :return: None
+    """
+    if dev_type == 'stationary':
+        function = likelihood_function_generator(feature_df, feature, dev_type='stationary')
+        data = feature_df[feature_df.is_out_of_hours == 1][feature].tolist()
+    if dev_type == 'shopper':
+        function = likelihood_function_generator(feature_df, feature, dev_type='shopper')
+        data = feature_df[feature_df.is_out_of_hours == 0][feature].tolist()
+    max_value = np.amax(data)
+    x = np.linspace(0, 1.2*max_value, num=1000)
+    y = [function(i) for i in x]
+    fig = plt.figure()
+    plt.hist(data, bins=50, normed=True)
+    plt.plot(x, y)
+    fig.show()
