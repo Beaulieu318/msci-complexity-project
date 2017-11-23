@@ -124,7 +124,7 @@ def sequential(prior, feature_df, feature_list):
     return prob_estimates
 
 
-def plot_probability_trace(prob_estimates, feature_list):
+def plot_probability_trace(prob_estimates, feature_list, stationary_percentage=[]):
     """
     plots sequence of posterior probabilities
 
@@ -135,40 +135,58 @@ def plot_probability_trace(prob_estimates, feature_list):
     stationary = [i[0] for i in prob_estimates]
     shopper = [i[1] for i in prob_estimates]
     print(feature_list)
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(8, 5))
-    plt.ylim((0, 1))
+    if len(stationary_percentage) > 0:
+        fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(18, 8))
+        axes[1].plot(range(len(feature_list)), stationary_percentage, linewidth=5)
+        axes[1].set_xlabel('Feature Sequence', fontsize=20)
+        axes[1].set_ylabel('Percentage of Stationary Devices (SL)')
+        axes[1].set_ylim((0, 1.2*np.amax(stationary_percentage)))
+        for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
+            y = [i[mac] for i in stationary]
+            axes[0].plot(range(len(feature_list)), y)
+        axes[0].set_xlabel('Feature Sequence', fontsize=20)
+        axes[0].set_ylabel('P(Stationary)')
+        axes[0].set_ylim((0, 1))
+    else:
+        fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(18, 8))
+        for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
+            y = [i[mac] for i in stationary]
+            axes[0].plot(range(len(feature_list)), y)
+        for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
+            y = [i[mac] for i in shopper]
+            axes[1].plot(range(len(feature_list)), y)
+        axes[0].set_xlabel('Feature Sequence', fontsize=20)
+        axes[0].set_ylabel('P(Stationary)')
+        axes[0].set_ylim((0,1))
+        axes[1].set_xlabel('Feature Sequence', fontsize=20)
+        axes[1].set_ylabel('P(Shopper)')
+        axes[1].set_ylim((0, 1))
     plt.title('Sequential Bayesian Inference for Device Classification')
-    #plt.setp(axes, xticks=range(len(feature_list)), xticklabels=feature_list)
-    for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
-        y = [i[mac] for i in stationary]
-        axes[0].plot(range(len(feature_list)), y)
-    for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
-        y = [i[mac] for i in shopper]
-        axes[1].plot(range(len(feature_list)), y)
-    axes[0].set_xlabel('Feature Sequence', fontsize=20)
-    axes[0].set_ylabel('P(Stationary)')
-    axes[1].set_xlabel('Feature Sequence', fontsize=20)
-    axes[1].set_ylabel('P(Shopper)')
-    #axes[0].set_xticks(range(len(feature_list)))
-    #axes[0].set_xticklabels(feature_list, fontdict={'verticalalignment': 'baseline'})
-    #axes[1].set_xticks(range(len(feature_list)))
-    #axes[1].set_xticklabels(feature_list)
     plt.xticks(range(len(feature_list)), feature_list, rotation='vertical')
     fig.tight_layout()
     fig.show()
 
 
-def inference_result_analysis(posteriors, feature_df, confidence, signal_df, plot_path=True):
+def inference_result_analysis(posteriors, feature_df, confidence, signal_df, stage=-1, plot_path=True):
     macs = feature_df.mac_address.tolist()
     manufacturers = feature_df.manufacturer.tolist()
-    final_probabilities = posteriors[-1]
+    final_probabilities = posteriors[stage]
     stationary_condition = final_probabilities[0] > confidence
     stationary_devices = [macs[i] for i in range(len(stationary_condition)) if stationary_condition[i]]
     stationary_manufacturer = [manufacturers[i] for i in range(len(stationary_condition)) if stationary_condition[i]]
     print('Number of Stationary Devices = ', len(stationary_devices))
     if plot_path:
         pfun.plot_path(signal_df, stationary_devices[:30])
-    return list(zip(stationary_manufacturer, stationary_devices))
+    return stationary_manufacturer, stationary_devices
+
+
+def inference_progress(posteriors, feature_df, confidence, signal_df):
+    number_of_macs = len(feature_df)
+    progress = [
+        inference_result_analysis(posteriors, feature_df, confidence, signal_df, stage=i, plot_path=False)
+        for i in range(len(posteriors))
+    ]
+    return [100*len(i[0])/number_of_macs for i in progress]
 
 
 def plot_dist(func, feature, max_value):
