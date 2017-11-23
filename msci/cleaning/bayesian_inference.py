@@ -139,10 +139,10 @@ def plot_probability_trace(prob_estimates, feature_list):
     plt.ylim((0, 1))
     plt.title('Sequential Bayesian Inference for Device Classification')
     plt.setp(axes, xticks=range(len(feature_list)), xticklabels=feature_list)
-    for mac in range(len(prob_estimates[0][0][:500])):
+    for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
         y = [i[mac] for i in stationary]
         axes[0].plot(range(len(feature_list)), y)
-    for mac in range(len(prob_estimates[0][0][:500])):
+    for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
         y = [i[mac] for i in shopper]
         axes[1].plot(range(len(feature_list)), y)
     axes[0].set_xlabel('Feature Sequence', fontsize=20)
@@ -151,6 +151,19 @@ def plot_probability_trace(prob_estimates, feature_list):
     axes[1].set_ylabel('P(Shopper)')
     fig.tight_layout()
     fig.show()
+
+
+def inference_result_analysis(posteriors, feature_df, confidence, signal_df, plot_path=True):
+    macs = feature_df.mac_address.tolist()
+    manufacturers = feature_df.manufacturer.tolist()
+    final_probabilities = posteriors[-1]
+    stationary_condition = final_probabilities[0] > confidence
+    stationary_devices = [macs[i] for i in range(len(stationary_condition)) if stationary_condition[i]]
+    stationary_manufacturer = [manufacturers[i] for i in range(len(stationary_condition)) if stationary_condition[i]]
+    print('Number of Stationary Devices = ', len(stationary_devices))
+    if plot_path:
+        pfun.plot_path(signal_df, stationary_devices[:30])
+    return list(zip(stationary_manufacturer, stationary_devices))
 
 
 def plot_dist(func, feature, max_value):
