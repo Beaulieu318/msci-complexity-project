@@ -5,6 +5,8 @@ import scipy.stats as stats
 import math
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
+import seaborn as sns
+import pandas as pd
 
 
 FEATURE_LIST = [
@@ -256,3 +258,39 @@ def kde_test(feature_df, feature, dev_type):
     plt.hist(data, bins=50, normed=True)
     plt.plot(x, y)
     fig.show()
+
+
+"""
+Correlation Analysis
+"""
+
+
+def pairplot(feature_df, feature_list):
+    """
+    Creates the pair plot which shows kdes on the diagonal and correlation on the off axis
+
+    :param feature_df: (pd.DataFrame) the features
+    :param feature_list: (list) A list of the features
+    """
+    features = ['is_out_of_hours'] + feature_list
+    g = sns.pairplot(
+        feature_df[features].dropna(),
+        vars=feature_list,
+        hue="is_out_of_hours", diag_kind="kde", dropna=True
+    )
+
+    for ax in g.axes.flat:
+        plt.setp(ax.get_xticklabels(), rotation=45)
+
+
+def ks_statistic(feature_df, feature_list):
+    statistic = []
+    for f in feature_list:
+        v1 = feature_df[feature_df.is_out_of_hours == 0][f].values.ravel()
+        v1 = v1[np.isfinite(v1)]
+        v2 = feature_df[feature_df.is_out_of_hours == 1][f].values.ravel()
+        v2 = v2[np.isfinite(v2)]
+        statistic.append(stats.ks_2samp(v1, v2)[0])
+    feat_stats_series = pd.Series(index=feature_list, data=statistic)
+    feat_stats_series.sort_values(ascending=False).plot(kind='bar')
+    plt.xticks(rotation='45')
