@@ -443,3 +443,37 @@ def bar_chart(manufacturers, data, feature):
     ax.set_xticklabels(manufacturers, rotation='vertical')
 
     fig.show()
+
+
+def length_of_stay(length, dev_type, plot=False):
+    """
+    likelihood function for the length of stay of a device
+
+    :param length: (int) length of stay in seconds
+    :param dev_type: (string) device type to be tested e.g. stationary
+    :param plot: (boolean) plot or no plot
+    :return: (float) likelihood
+    """
+    type_data = {'stationary': [23*60*60, 1*60*60], 'shopper': [2*60*60, 8*60*60], 'worker': []}
+    mu = type_data[dev_type][0]
+    sigma = type_data[dev_type][1]
+    if plot:
+        plot_dist(mu, sigma, 'Length of Stay (s)')
+    return np.exp(-(length - mu)**2/(2*sigma**2))/np.sqrt(2*math.pi*sigma)
+
+
+def radius_likelihood(r_g, dev_type, plot=False):
+    """
+    likelihood function for the length of stay of a device
+
+    :param r_g: (float) radius of gyration for path
+    :param dev_type: (string) device type to be tested e.g. stationary
+    :param plot: (boolean) plot or no plot
+    :return: (float) likelihood
+    """
+    type_data = {'stationary': [4, 8], 'shopper': [40, 20], 'worker': []}
+    mu = type_data[dev_type][0]
+    sigma = type_data[dev_type][1]
+    if plot:
+        plot_dist(mu, sigma, 'Radius of Gyration')
+    return np.exp(-(r_g - mu) ** 2 /(2*sigma**2))/np.sqrt(2*math.pi*sigma)
