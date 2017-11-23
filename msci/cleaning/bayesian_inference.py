@@ -138,7 +138,7 @@ def plot_probability_trace(prob_estimates, feature_list):
     fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(8, 5))
     plt.ylim((0, 1))
     plt.title('Sequential Bayesian Inference for Device Classification')
-    plt.setp(axes, xticks=range(len(feature_list)), xticklabels=feature_list)
+    #plt.setp(axes, xticks=range(len(feature_list)), xticklabels=feature_list)
     for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
         y = [i[mac] for i in stationary]
         axes[0].plot(range(len(feature_list)), y)
@@ -149,6 +149,11 @@ def plot_probability_trace(prob_estimates, feature_list):
     axes[0].set_ylabel('P(Stationary)')
     axes[1].set_xlabel('Feature Sequence', fontsize=20)
     axes[1].set_ylabel('P(Shopper)')
+    #axes[0].set_xticks(range(len(feature_list)))
+    #axes[0].set_xticklabels(feature_list, fontdict={'verticalalignment': 'baseline'})
+    #axes[1].set_xticks(range(len(feature_list)))
+    #axes[1].set_xticklabels(feature_list)
+    plt.xticks(range(len(feature_list)), feature_list, rotation='vertical')
     fig.tight_layout()
     fig.show()
 
