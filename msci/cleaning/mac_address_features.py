@@ -223,6 +223,9 @@ def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
         mac_address_df['total_path_length'] = \
         calculate_path_length(signal_df, mac_address_df)
     mac_address_df['av_straightness'] = calculate_straightness(signal_df, mac_address_df)
+    mac_address_df['av_speed_from_total'] = mac_address_df['total_path_length'] / mac_address_df['length_of_stay']
+    mac_address_df['turning_angle_per_meter'] = \
+        mac_address_df['total_turning_angle'] / mac_address_df['total_path_length']
     add_probability_columns(mac_address_df)
     if export_location:
         mac_address_df.to_csv(export_location, index=False)
