@@ -204,6 +204,17 @@ def add_probability_columns(mac_address_df):
     mac_address_df['resolved'] = False
 
 
+def add_wifi_type(signal_df, mac_address_df):
+    mac_address_df['wifi_type'] = np.nan
+
+    wifi_types = ['wifiuser', 'lawifiuser', 'Discovered-AP', 'fatti Bot ', 'unknown']
+    for wifi_type in wifi_types:
+        signal_wifi_type = signal_df[signal_df.wifi_type == wifi_type].mac_address.tolist()
+        mac_address_df.loc[
+            mac_address_df.wifi_type.isnull() &
+            (mac_address_df.mac_address.isin(signal_wifi_type)), 'wifi_type'] = wifi_type
+
+
 def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
     signal_df = utils.import_signals(mall)
     mac_address_df = create_mac_address_df(signal_df)
@@ -224,7 +235,7 @@ def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
         calculate_path_length(signal_df, mac_address_df)
     mac_address_df['av_straightness'] = calculate_straightness(signal_df, mac_address_df)
     mac_address_df['av_speed_from_total'] = mac_address_df['total_path_length'] / mac_address_df['length_of_stay']
-    mac_address_df['turning_angle_per_meter'] = \
+    mac_address_df['turning_angle_density'] = \
         mac_address_df['total_turning_angle'] / mac_address_df['total_path_length']
     add_probability_columns(mac_address_df)
     if export_location:

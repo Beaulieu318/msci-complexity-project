@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 
-COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
+COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y', 'wifi_type', 'email']
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
