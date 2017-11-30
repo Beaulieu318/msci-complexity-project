@@ -2,6 +2,10 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pandas as pd
+import math
+import numpy as np
+from scipy.optimize import fmin
+import matplotlib.cm as cm
 
 from msci.utils.animation import RealShoppersAnimation
 
@@ -157,3 +161,86 @@ def animate(signal_df, mac_address_df, jn=False):
     else:
         a = anim.run()
         plt.show()
+
+
+def multiple_venn(all_stationary, mac_list, mac_labels):
+    """
+    allows plotting of >3 circle venn diagram with no overlap between subsets
+    ideal for showing stationary/moving breakdown of different manufacturers
+
+    :param all_stationary: (list) stationary mac addresses
+    :param mac_list: (list of lists) stationary mac addresses of different manufacturers
+    :param mac_labels: (list) manufacturer names
+    :return: venn diagram metrics
+    """
+    angles = [i*2*math.pi/len(mac_list) for i in range(len(mac_list))]
+    circle_areas = [len(i) for i in mac_list]
+    stationary_area = len(all_stationary)
+    distances = []
+    overlaps = []
+    for i in range(len(circle_areas)):
+        overlap = len([i for i in mac_list[i] if i in all_stationary])
+        area = circle_areas[i]
+        d = find_d(chord_dist_func, overlap, stationary_area, area)[0]
+        distances.append(d)
+        overlaps.append([overlap, len(mac_list[i]) - overlap])
+    circles = [[0, 0, np.sqrt(stationary_area/math.pi)]]
+    for j in range(len(angles)):
+        if 0 <= angles[j] < 0.5*math.pi:
+            distance = distances[j]
+            alpha = distance/np.sqrt(1 + (np.tan(angles[j]))**2)
+            beta = np.sqrt(distance**2 - alpha**2)
+            radius = np.sqrt(circle_areas[j]/math.pi)
+            circles.append([alpha, beta, radius])
+        if 0.5*math.pi <= angles[j] < math.pi:
+            distance = distances[j]
+            alpha = -1*distance/np.sqrt(1 + (np.tan(angles[j]))**2)
+            beta = np.sqrt(distance**2 - alpha**2)
+            radius = np.sqrt(circle_areas[j]/math.pi)
+            circles.append([alpha, beta, radius])
+        if math.pi <= angles[j] < 1.5*math.pi:
+            distance = distances[j]
+            alpha = -1 * distance / np.sqrt(1 + (np.tan(angles[j])) ** 2)
+            beta = -1*np.sqrt(distance ** 2 - alpha ** 2)
+            radius = np.sqrt(circle_areas[j] / math.pi)
+            circles.append([alpha, beta, radius])
+        if 1.5*math.pi <= angles[j] < 2*math.pi:
+            distance = distances[j]
+            alpha = distance / np.sqrt(1 + (np.tan(angles[j])) ** 2)
+            beta = -1*np.sqrt(distance ** 2 - alpha ** 2)
+            radius = np.sqrt(circle_areas[j] / math.pi)
+            circles.append([alpha, beta, radius])
+    plot_circles(circles, mac_labels, overlaps)
+    return distances, angles, circle_areas
+
+
+def chord_dist_func(d, overlap, R, r):
+    a0 = 0.5 * np.sqrt((-d + r + R) * (d + r - R) * (d - r + R) * (d + r + R))
+    a1 = r ** 2 * np.arccos((d ** 2 + r ** 2 - R ** 2) / (2 * d * r)) + R ** 2 * np.arccos(
+        (d ** 2 + R ** 2 - r ** 2) / (2 * d * R))
+    return np.abs(overlap - (a1 - a0))
+
+
+def find_d(func, overlap_area, A, a):
+    r = np.sqrt(a/math.pi)
+    R = np.sqrt(A/math.pi)
+    return fmin(func, x0=R, args=(overlap_area, R, r))
+
+
+def plot_circles(list_of_circles, manufacturers, splits):
+    colors = cm.rainbow(np.linspace(0, 1, len(list_of_circles)))
+    fig, ax = plt.subplots()
+    circles = []
+    for cir in list_of_circles[1:]:
+        ind = list_of_circles.index(cir) - 1
+        c = plt.Circle((cir[0], cir[1]), cir[2], color=colors[list_of_circles.index(cir)])
+        circles.append(c)
+        ax.add_artist(c)
+        plt.annotate(str(splits[ind][0]) + ':' + str(splits[ind][1]), (cir[0], cir[1]))
+    c = plt.Circle((list_of_circles[0][0],
+                    list_of_circles[0][1]), list_of_circles[0][2], label='Stationary', fill=False)
+    ax.add_artist(c)
+    plt.legend(tuple(circles), tuple(manufacturers), loc=2)
+    plt.xlim((-70, 70))
+    plt.ylim((-70, 70))
+    fig.show()
