@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import seaborn as sns
 import pandas as pd
+import matplotlib_venn as venn
+
 
 
 FEATURE_LIST = [
@@ -76,11 +78,12 @@ def likelihood_function_generator(mac_address_df, feature, dev_type, plot=False)
     if dev_type == 'shopper':
         values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 0][feature].values.ravel()
     values = values[np.isfinite(values)]
+    print(len(values))
     func = stats.kde.gaussian_kde(values)
     if plot:
         plot_dist(func, feature, np.amax(values))
     integral = integrate.quad(func, 0, 100000)
-    print(feature, integral)
+    #print(feature, integral)
     return func
 
 
@@ -159,7 +162,7 @@ def plot_probability_trace(prob_estimates, feature_list, stationary_percentage=[
             axes[1].plot(range(len(feature_list)), y)
         axes[0].set_xlabel('Feature Sequence', fontsize=20)
         axes[0].set_ylabel('P(Stationary)')
-        axes[0].set_ylim((0,1))
+        axes[0].set_ylim((0, 1))
         axes[1].set_xlabel('Feature Sequence', fontsize=20)
         axes[1].set_ylabel('P(Shopper)')
         axes[1].set_ylim((0, 1))
@@ -255,7 +258,7 @@ def kde_test(feature_df, feature, dev_type):
     x = np.linspace(0, 1.2*max_value, num=1000)
     y = [function(i) for i in x]
     fig = plt.figure()
-    plt.hist(data, bins=50, normed=True)
+    plt.hist(data, bins=30, normed=True)
     plt.plot(x, y)
     fig.show()
 
@@ -272,6 +275,7 @@ def pairplot(feature_df, feature_list):
     :param feature_df: (pd.DataFrame) the features
     :param feature_list: (list) A list of the features
     """
+    fig = plt.figure()
     features = ['is_out_of_hours'] + feature_list
     g = sns.pairplot(
         feature_df[features].dropna(),
@@ -281,6 +285,8 @@ def pairplot(feature_df, feature_list):
 
     for ax in g.axes.flat:
         plt.setp(ax.get_xticklabels(), rotation=45)
+    plt.tight_layout()
+    fig.show()
 
 
 def ks_statistic(feature_df, feature_list):
@@ -294,3 +300,80 @@ def ks_statistic(feature_df, feature_list):
     feat_stats_series = pd.Series(index=feature_list, data=statistic)
     feat_stats_series.sort_values(ascending=False).plot(kind='bar')
     plt.xticks(rotation='45')
+
+
+def venn_diagram(mac_list, set_labels):
+    fig = plt.figure()
+    sets = [set(i) for i in mac_list]
+    if len(mac_list) == 2:
+        venn.venn2(sets, set_labels)
+    if len(mac_list) == 3:
+        venn.venn3(sets, set_labels)
+    fig.tight_layout()
+    fig.show()
+
+
+def recursive_bayesian(feature_df, feature_list, prior, confidence, signal_df):
+    """
+    applies Bayesian inference recursively until convergent condition is met
+
+    :param feature_df: feature data frame
+    :param feature_list: feature list
+    :param prior: prior probability of stationary device
+    :param confidence: confidence interval for stationary device
+    :param signal_df: signal data frame
+    :return: all stationary macs from recursive regime
+    """
+    all_macs = feature_df.mac_address.tolist()
+    stationary_threshold = 1
+    all_stationary = []
+    while stationary_threshold > 0:
+        post = sequential(prior, feature_df, feature_list)
+        prog = inference_result_analysis(post, feature_df, confidence, signal_df, stage=-1, plot_path=False)
+        stationary_devices = prog[1]
+        all_stationary.append(stationary_devices)
+        feature_df = feature_df[~feature_df.mac_address.isin(stationary_devices)]
+        stationary_threshold = len(stationary_devices)
+    flat_stationary = [i for j in all_stationary for i in j]
+    all_shopper = [i for i in all_macs if i not in flat_stationary]
+    return all_stationary, all_shopper
+
+
+def evaluate_recursion(rb, feature_df, plot=False):
+    """
+    identifies mac addresses that are nominally stationary i.e. give signals out of hours but are then reclassified
+    as non-stationary by the the recursive Bayesian. Naively these could be the mall staff.
+
+    :param rb:
+    :param feature_df:
+    :return:
+    """
+    out_of_hours = feature_df[feature_df.is_out_of_hours == 1].mac_address.tolist()
+    #in_hours = feature_df[feature_df.is_out_of_hours == 0].mac_address.tolist()
+    flat_rb = [i for j in rb[0] for i in j]
+    moving_out = [i for i in out_of_hours if i not in flat_rb]
+    if plot:
+        venn_diagram([out_of_hours, flat_rb, rb[1]], ['Out of hours', 'Classified stationary', 'Classified shopper'])
+    moving_out_df = feature_df[feature_df.mac_address.isin(moving_out)]
+    return moving_out, moving_out_df
+
+
+def stationary_manufacturer(manufacturer_list, rb, feature_df):
+    """
+
+
+    :param manufacturer_list:
+    :param rb:
+    :param feature_df:
+    :return:
+    """
+    flat_stationary = [i for j in rb[0] for i in j]
+    mac_set = []
+    mac_labels = []
+    for manufacturer in manufacturer_list:
+        df = feature_df[feature_df.manufacturer == manufacturer]
+        mac_set.append(df.mac_address.tolist())
+        mac_labels.append(manufacturer)
+    mac_set.append(flat_stationary)
+    mac_labels.append('stationary')
+    venn_diagram(mac_set, mac_labels)
