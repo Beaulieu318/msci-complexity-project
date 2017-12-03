@@ -8,7 +8,9 @@ import scipy.integrate as integrate
 import seaborn as sns
 import pandas as pd
 import matplotlib_venn as venn
-
+import time
+from sklearn.neighbors import KernelDensity
+from sklearn.decomposition import PCA
 
 
 FEATURE_LIST = [
@@ -78,7 +80,7 @@ def likelihood_function_generator(mac_address_df, feature, dev_type, plot=False)
     if dev_type == 'shopper':
         values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 0][feature].values.ravel()
     values = values[np.isfinite(values)]
-    print(len(values))
+    #print(len(values))
     func = stats.kde.gaussian_kde(values)
     if plot:
         plot_dist(func, feature, np.amax(values))
@@ -258,7 +260,7 @@ def kde_test(feature_df, feature, dev_type):
     x = np.linspace(0, 1.2*max_value, num=1000)
     y = [function(i) for i in x]
     fig = plt.figure()
-    plt.hist(data, bins=30, normed=True)
+    plt.hist(data, bins=80, normed=True)
     plt.plot(x, y)
     fig.show()
 
@@ -327,16 +329,20 @@ def recursive_bayesian(feature_df, feature_list, prior, confidence, signal_df):
     all_macs = feature_df.mac_address.tolist()
     stationary_threshold = 1
     all_stationary = []
-    while stationary_threshold > 0:
+    count = 2
+    while stationary_threshold > 0 and count > 1:
         post = sequential(prior, feature_df, feature_list)
         prog = inference_result_analysis(post, feature_df, confidence, signal_df, stage=-1, plot_path=False)
         stationary_devices = prog[1]
         all_stationary.append(stationary_devices)
         feature_df = feature_df[~feature_df.mac_address.isin(stationary_devices)]
+        count = len(feature_df[feature_df.is_out_of_hours == 1])
+        print('count', count)
         stationary_threshold = len(stationary_devices)
+        print('stationary threshold', stationary_threshold)
     flat_stationary = [i for j in all_stationary for i in j]
     all_shopper = [i for i in all_macs if i not in flat_stationary]
-    return all_stationary, all_shopper
+    return all_stationary, all_shopper, flat_stationary, stationary_threshold
 
 
 def evaluate_recursion(rb, feature_df, plot=False):
@@ -377,3 +383,83 @@ def stationary_manufacturer(manufacturer_list, rb, feature_df):
     mac_set.append(flat_stationary)
     mac_labels.append('stationary')
     venn_diagram(mac_set, mac_labels)
+
+
+def subset_bayesian(subset_size, iterations, feature_df, feature_list, prior, confidence, signal_df):
+    """
+    explores robustness of bayesian inference by considering random subsets of the data
+
+    :param subset_size: (int) size of subset to be considered
+    :param iterations: (int) how many random subsets to test
+    :param feature_df: (df) feature data frame
+    :param feature_list: (list of strings) list of features for inference chain
+    :param prior: (float) prior probability of stationary
+    :param confidence: (float) confidence level needed for stationary classification
+    :param signal_df: signal data frame
+    :return: information on stationary classification for each mac address over the subset iterations
+    """
+    stationary_macs_by_iteration = {}
+    all_macs = feature_df.mac_address.tolist()
+    stationary_macs = {}
+    times = []
+    end_type = []
+    for mac in all_macs:
+        stationary_macs[mac] = []
+    for i in range(iterations):
+        t0 = time.time()
+        print(i)
+        random_indices = np.random.choice(np.arange(len(feature_df)), size=subset_size)
+        random_macs = [all_macs[mac] for mac in range(len(feature_df)) if mac in random_indices]
+        random_feature_df = feature_df[feature_df.index.isin(random_indices)]
+        rb = recursive_bayesian(random_feature_df, feature_list, prior, confidence, signal_df)
+        end_type.append(rb[-1])
+        stationary_macs_by_iteration[str(i)] = [random_macs, rb[2]]
+        for j in random_macs:
+            if j in rb[2]:
+                stationary_macs[j].append(True)
+            else:
+                stationary_macs[j].append(False)
+        times.append(time.time() - t0)
+    return stationary_macs, stationary_macs_by_iteration, times
+
+
+def subset_analysis(subset_bayesian_result, feature_df):
+    sbr = subset_bayesian_result
+    #macs = feature_df.mac_address.tolist()
+    breakdown = {mac: [info.count(True), info.count(False)] for mac, info in sbr.items()}
+    inconsistent = {mac: info for mac, info in breakdown.items() if 0 not in info}
+    empty = {mac: info for mac, info in breakdown.items() if len(info) == 0}
+    completely_consistent = {mac: info for mac, info in breakdown.items() if 0 in info and info[0] != info[1]}
+    return breakdown, completely_consistent, empty, inconsistent
+
+
+def plot_subset(completely_consistent, inconsistent):
+    """
+    plots pie chart to show fraction of consistently classified stationary devices
+    plots distribution of fractions among inconsistently classified devices
+
+    :param completely_consistent: (dictionary) macs corresponding to consistently classified devices
+    :param inconsistent: (dictionary) macs corresponding to inconsistently classified devices
+    :return: None
+    """
+    macs = list(inconsistent.keys())
+    true_array = [inconsistent[i][0]/np.sum(inconsistent[i]) for i in macs]
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(20, 12))
+
+    axes[0].pie([len(completely_consistent), len(inconsistent)],
+            labels=['robust', 'inconsistent'], explode=[0, 0.1], shadow=False, autopct='%1.0f%%', labeldistance=0.8)
+    axes[1].hist(true_array, bins=50)
+    axes[1].set_xlabel('fraction of stationary classifications')
+    axes[1].set_ylabel('probability_density_function')
+    plt.suptitle('Bayesian Inference Subset Analysis')
+    fig.show()
+
+
+def principal_component_analysis(feature_df, feature_list):
+    feature_data = [feature_df[feature].tolist() for feature in feature_list]
+    data_pca = np.array(list(map(list, zip(*feature_data))))
+    pca = PCA(n_components=len(feature_list))
+    pca.fit(data_pca)
+    variance = pca.explained_variance_ratio_
+    singular = pca.singular_values_
+    return feature_data, data_pca, pca, variance, singular
