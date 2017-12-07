@@ -76,7 +76,7 @@ def plot_path_jn(signal_df, mac_address_df, axes, scatter=True):
 
     for title, group in signal_group:
         if scatter:
-            plt.scatter(group.x, group.y, label=title, s=0.7)
+            plt.scatter(group.x, group.y, label=title, s=2)
         else:
             plt.plot(group.x, group.y, label=title)
 
