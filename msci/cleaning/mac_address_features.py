@@ -207,6 +207,19 @@ def add_wifi_type(signal_df, mac_address_df):
             (mac_address_df.mac_address.isin(signal_wifi_type)), 'wifi_type'] = wifi_type
 
 
+def find_start_end_coordinate(signal_df, mac_address_df):
+    macs = mac_address_df.mac_address.tolist()
+    signal_sorted_df = signal_df.sort_values('date_time')
+    signal_mac_group = signal_sorted_df.groupby('mac_address')
+    start_coordinates = []
+    end_coordinates = []
+    for mac in macs:
+        mac_signals_df = signal_mac_group.get_group(mac)
+        start_coordinates.append([mac_signals_df.x.iloc[0], mac_signals_df.y.iloc[0]])
+        end_coordinates.append([mac_signals_df.x.iloc[-1], mac_signals_df.y.iloc[-1]])
+    return start_coordinates, end_coordinates
+
+
 def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
     signal_df = utils.import_signals(mall)
     mac_address_df = create_mac_address_df(signal_df)
@@ -229,6 +242,9 @@ def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
     mac_address_df['av_speed_from_total'] = mac_address_df['total_path_length'] / mac_address_df['length_of_stay']
     mac_address_df['turning_angle_density'] = \
         mac_address_df['total_turning_angle'] / mac_address_df['total_path_length']
+    mac_address_df['start_coordinate'], \
+        mac_address_df['end_coordinate'] = \
+        find_start_end_coordinate(signal_df, mac_address_df)
     add_wifi_type(signal_df, mac_address_df)
     if export_location:
         mac_address_df.to_csv(export_location, index=False)
