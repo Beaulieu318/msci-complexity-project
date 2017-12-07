@@ -126,6 +126,54 @@ def plot_3d(sep_clusters):
     fig.show()
 
 
+def period_analysis(signal_df, macs):
+    #feature_df = feature_df[feature_df.frequency > 10]
+    #macs = feature_df.mac_address.tolist()
+    grouped = signal_df.groupby('mac_address')
+    groups = [grouped.get_group(i) for i in macs]
+    all_periods = []
+    all_times = []
+    for group in groups:
+        times = group.date_time.tolist()
+        periods = [utils.time_difference(times[j], times[j+1]) for j in range(len(group) - 1)]
+        all_times.append(times)
+        all_periods.append(periods)
+    return all_periods, all_times
+
+
+def out_of_hour_periods(p_analysis):
+    period_splits = []
+    for i in range(len(p_analysis[1])):
+        before_hours = [
+            p_analysis[1][i].index(t) for t in p_analysis[1][i] if t < pd.tslib.Timestamp('2016-12-22 08:00:00')
+        ]
+        after_hours = [
+            p_analysis[1][i].index(t) for t in p_analysis[1][i] if t > pd.tslib.Timestamp('2016-12-22 22:00:00')
+        ]
+        out_indices = before_hours + after_hours
+        out_periods = [p_analysis[0][i][j] for j in range(len(p_analysis[0][i])) if j in out_indices]
+        in_periods = [p_analysis[0][i][j] for j in range(len(p_analysis[0][i])) if j not in out_indices]
+        period_splits.append([out_periods, in_periods])
+    return period_splits
+
+
+def period_plot(p_analysis, feature_df):
+    all_periods = p_analysis[0]
+    all_times = p_analysis[1]
+    feature_df = feature_df[feature_df.frequency > 10]
+    macs = feature_df.mac_address.tolist()
+    fig = plt.figure()
+    for i in range(len(macs[:3])):
+        if feature_df.iloc[i].is_out_of_hours == 1:
+            plt.plot(all_times[i][1:], all_periods[i], color='r')
+        else:
+            plt.plot(all_times[i][1:], all_periods[i], color='b')
+    plt.xlabel('Time')
+    plt.ylabel('Pinging Period')
+    fig.tight_layout()
+    fig.show()
+
+
 def identify_duplicate_data(df):
     df['manufacturer'] = utils.add_device_type_signal(df)
     macs = df.mac_address.drop_duplicates().tolist()
