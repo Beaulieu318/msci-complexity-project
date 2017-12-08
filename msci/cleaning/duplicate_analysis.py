@@ -1,10 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.cm as cm
 from sklearn.cluster import KMeans
 import pandas as pd
-from sklearn.preprocessing import scale
 import msci.utils.plot as pfun
 from msci.utils import utils
 import time
@@ -14,11 +12,7 @@ from collections import defaultdict
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 mac_address_df = pd.read_csv(dir_path + '/../data/mac_address_features.csv')
-
 mac_address_clean_df = mac_address_df.dropna()
-
-# samples = mac_address_clean_df.as_matrix(columns=['gyration', 'cdv', 'length_of_stay'])
-# samples_scaled = scale(samples)
 
 manufacturers_df = {
     'HUAWEI TECHNOLOGIES CO.,LTD': False,
@@ -127,8 +121,6 @@ def plot_3d(sep_clusters):
 
 
 def period_analysis(signal_df, macs):
-    #feature_df = feature_df[feature_df.frequency > 10]
-    #macs = feature_df.mac_address.tolist()
     grouped = signal_df.groupby('mac_address')
     groups = [grouped.get_group(i) for i in macs]
     all_periods = []

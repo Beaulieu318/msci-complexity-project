@@ -55,7 +55,13 @@ def time_difference(t0, t1):
     return tdelta.seconds
 
 
-def add_device_type_signal(signal_df):
+def add_manufacturer_to_signal(signal_df):
+    """
+    Returns a list containing the manufacturer for each signal in the signal_df
+
+    :param signal_df: (pd.DataFrame) Contains the signals
+    :return: (list) containing the manufacturer
+    """
     mac_cross_reference_df = pd.read_csv(dir_path + '/../data/mac_address_cross_reference.csv')
     signal_df2 = signal_df.copy()
     signal_df2['mac_address_short'] = signal_df2.mac_address.str.replace(':', '').str.upper().str[:6]

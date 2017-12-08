@@ -8,6 +8,12 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def create_mac_address_df(signal_df):
+    """
+    Creates the mac_address_df (or feature_df) dataframe which has each unique mac address (device)
+
+    :param signal_df: (pd.DataFrame) Contains the signals dataframe
+    :return: (pd.DataFrame) The unique mac addresses with initial features
+    """
     mac_addresses = signal_df.mac_address.value_counts()
     mac_address_df = pd.DataFrame(mac_addresses)
     mac_address_df.rename(columns={'mac_address': 'frequency'}, inplace=True)
@@ -17,6 +23,13 @@ def create_mac_address_df(signal_df):
 
 
 def calculate_radius_gyration(signal_df, mac_address_df):
+    """
+    Calculates the radius of gyration which is a measure of how far the mac address moves from their central position
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list) The radius of gyration for each of the mac addresses
+    """
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     macs = mac_address_df.mac_address.tolist()
@@ -34,20 +47,31 @@ def calculate_radius_gyration(signal_df, mac_address_df):
 
 
 def find_device_type(mac_address_df):
+    """
+    Finds the manufacturer for each of the mac addresses
+
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list) the manufacturer for the mac addresses
+    """
     mac_cross_reference_df = pd.read_csv(dir_path + '/../data/mac_address_cross_reference.csv')
     mac_address_df2 = mac_address_df.copy()
     mac_address_df2['mac_address_short'] = mac_address_df2.mac_address.str.replace(':', '').str.upper().str[:6]
-    mac_address_df2 = mac_address_df2.merge(mac_cross_reference_df, how='left', left_on='mac_address_short', right_on='Assignment')
+    mac_address_df2 = mac_address_df2.merge(
+        mac_cross_reference_df,
+        how='left', left_on='mac_address_short',
+        right_on='Assignment'
+    )
     return mac_address_df2['Organization Name']
 
 
 def calculate_count_density_variance(signal_df, mac_address_df, minute_resolution=5):
     """
     Bins times into intervals of length 'minute resolution', and finds variance of counts
-    :param signal_df: data frame
-    :param mac_address_df: (pd.DataFrame)
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
     :param minute_resolution: (str) number of minutes into which to group data
-    :return: list of count variances for each mac address
+    :return: (list) count variances for each mac address
     """
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
@@ -61,6 +85,13 @@ def calculate_count_density_variance(signal_df, mac_address_df, minute_resolutio
 
 
 def calculate_length_of_stay(signal_df, mac_address_df):
+    """
+    Calculates the total length of stay in seconds for each of the mac addresses
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list) the length of stay for each of the mac addresses
+    """
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     macs = mac_address_df.mac_address.tolist()
@@ -70,6 +101,13 @@ def calculate_length_of_stay(signal_df, mac_address_df):
 
 
 def is_out_of_hours(signal_df, mac_address_df):
+    """
+    Returns a boolean if the mac address is definitely out of hours (present from 3am to 5am)
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list) A boolean if each mac address is out of hours
+    """
     macs = mac_address_df.mac_address.tolist()
     date_index_df = signal_df.copy()
     date_index_df.index = date_index_df.date_time.astype('datetime64[ns]')
@@ -80,6 +118,13 @@ def is_out_of_hours(signal_df, mac_address_df):
 
 
 def calculate_average_speed(signal_df, mac_address_df):
+    """
+    Calculates the average speed for each mac address
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list) The average speed of each mac address
+    """
     macs = mac_address_df.mac_address.tolist()
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
@@ -99,6 +144,13 @@ def calculate_average_speed(signal_df, mac_address_df):
 
 
 def calculate_turning_angle(signal_df, mac_address_df):
+    """
+    Calculate the average and total turning angle as well as the change in turning angle (turning angle velocity)
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list list list) Three list containing information about the turning angle of each mac address
+    """
     macs = mac_address_df.mac_address.tolist()
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
@@ -139,6 +191,13 @@ def calculate_turning_angle(signal_df, mac_address_df):
 
 
 def calculate_path_length(signal_df, mac_address_df):
+    """
+    Calculates the average and total path length for each mac address
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list list) Two lists containing the average and total path length
+    """
     macs = mac_address_df.mac_address.tolist()
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
@@ -168,6 +227,13 @@ def calculate_path_length(signal_df, mac_address_df):
 
 
 def calculate_straightness(signal_df, mac_address_df):
+    """
+    Calculate the straightness (add two paths together and divide by the total displacement) of each mac address
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list) The straightness of each mac address
+    """
     macs = mac_address_df.mac_address.tolist()
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
@@ -197,6 +263,13 @@ def calculate_straightness(signal_df, mac_address_df):
 
 
 def add_wifi_type(signal_df, mac_address_df):
+    """
+    Add the wifi type (a feature in the signal_df dataframe) which shows where a user is thought to be a shopper
+    N.B. This changes the mac_address_df entered as a parameter
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    """
     mac_address_df['wifi_type'] = np.nan
 
     wifi_types = ['wifiuser', 'lawifiuser', 'Discovered-AP', 'fatti Bot ', 'unknown']
@@ -208,6 +281,13 @@ def add_wifi_type(signal_df, mac_address_df):
 
 
 def find_start_end_coordinate(signal_df, mac_address_df):
+    """
+    Finds the first and last coordinates of the mac address path
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list list) Two list containing a list of x, y coordinates of the start and end positions
+    """
     macs = mac_address_df.mac_address.tolist()
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
@@ -221,6 +301,13 @@ def find_start_end_coordinate(signal_df, mac_address_df):
 
 
 def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
+    """
+    Creates the mac address features dataframe which is used to determine whether the device is a shopper
+
+    :param mall: (string) The name of the mall
+    :param export_location: (string or None) The location of where this is exported
+    :return: (pd.DataFrame) If export location is None, returns the dataframe created
+    """
     signal_df = utils.import_signals(mall)
     mac_address_df = create_mac_address_df(signal_df)
     mac_address_df['centroid'], \

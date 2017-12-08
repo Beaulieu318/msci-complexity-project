@@ -12,9 +12,14 @@ from msci.utils.animation import RealShoppersAnimation
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
+"""
+Path plots on the map of Mall of Mauritius
+"""
+
+
 def plot_path(signal_df, mac_address_df, scatter=True):
     """
-    plots paths of list of mac addresses through shopping mall
+    Plots paths of list of mac addresses through shopping mall
 
     :param signal_df: data frame
     :param mac_address_df: list of mac addresses
@@ -53,7 +58,7 @@ def plot_path(signal_df, mac_address_df, scatter=True):
 
 def plot_path_jn(signal_df, mac_address_df, axes, scatter=True):
     """
-    plots paths of list of mac addresses through shopping mall
+    Plots paths of list of mac addresses through shopping mall
 
     :param signal_df: data frame
     :param mac_address_df: list of mac addresses
@@ -88,28 +93,15 @@ def plot_path_jn(signal_df, mac_address_df, axes, scatter=True):
     axes.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1))
 
 
-def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
+def plot_points_on_map(x, y, label=False):
     """
-    This plots the histogram of mac address against time
+    Plots list of x,y coordinates onto a map
 
-    :param signal_df: (pd.DataFrame) The signals
-    :param axes: The figure ax
-    :param minute_resolution: (int) The resolution of the time
-    :param label: (str) The label of the line
+    :param x: (list) A list of x coordinates
+    :param y: (list) A list of y coordinates
+    :param label: (Boolean) Where the coordinates should be labelled with numbers
     :return: A plot
     """
-    signal_df.date_time = signal_df.date_time.dt.round(str(minute_resolution) + 'min')
-    signal_time_df = signal_df.groupby('date_time').mac_address.nunique().to_frame()
-    if label is not None:
-        signal_time_df.rename(columns={'mac_address': label}, inplace=True)
-
-    ax = signal_time_df.plot(ax=axes)
-    ax.set_title('Histogram of mac addresses against time')
-    ax.set_xlabel('Time (hh:mm)')
-    ax.set_ylabel('Count of mac addresses per {} mins (no.)'.format(minute_resolution))
-
-
-def plot_points_on_map(x, y, label=False):
     fig = plt.figure()
 
     img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
@@ -129,7 +121,46 @@ def plot_points_on_map(x, y, label=False):
     fig.show()
 
 
+"""
+Histogram plots against time
+"""
+
+
+def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
+    """
+    This plots the histogram of mac address against time.
+    The y axis shows how many mac addresses (devices) where present over during the minute_resolution intervals.
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param axes: The figure ax
+    :param minute_resolution: (int) The resolution of the time
+    :param label: (str) The label of the line
+    :return: A plot
+    """
+    signal_df.date_time = signal_df.date_time.dt.round(str(minute_resolution) + 'min')
+    signal_time_df = signal_df.groupby('date_time').mac_address.nunique().to_frame()
+    if label is not None:
+        signal_time_df.rename(columns={'mac_address': label}, inplace=True)
+
+    ax = signal_time_df.plot(ax=axes)
+    ax.set_title('Histogram of mac addresses against time')
+    ax.set_xlabel('Time (hh:mm)')
+    ax.set_ylabel('Count of mac addresses per {} mins (no.)'.format(minute_resolution))
+
+
+"""
+Animation
+"""
+
+
 def reformat_data(signal_df, mac_address_df):
+    """
+    Formats the data so that it can be understood by the animation
+
+    :param signal_df: (pd.DataFrame) The signals data frame
+    :param mac_address_df: (pd.Series) The series of mac addresses which need to be animated
+    :return: The signals that used for the animation
+    """
     if type(mac_address_df) == pd.core.frame.DataFrame:
         selected_signal_df = signal_df[signal_df.mac_address.isin(mac_address_df.mac_address.tolist())]
     elif (type(mac_address_df) == list) or (type(mac_address_df) == pd.core.series.Series):
@@ -154,6 +185,14 @@ def _create_group(items):
 
 
 def animate(signal_df, mac_address_df, jn=False):
+    """
+    Create an animation of the mac addresses moving around the show
+
+    :param signal_df: (pd.DataFrame) The signals data frame
+    :param mac_address_df: (pd.Series) The series of mac addresses which need to be animated
+    :param jn: (Bool) If this is run in a jupyter notebook
+    :return: An animation
+    """
     shoppers_history = reformat_data(signal_df, mac_address_df)
     anim = RealShoppersAnimation(shoppers_history, 100)
     if jn:
@@ -161,6 +200,11 @@ def animate(signal_df, mac_address_df, jn=False):
     else:
         a = anim.run()
         plt.show()
+
+
+"""
+Venn Diagram with more than 3 circles
+"""
 
 
 def multiple_venn(all_stationary, mac_list, mac_labels):

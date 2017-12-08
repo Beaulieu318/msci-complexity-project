@@ -30,7 +30,8 @@ FEATURE_LIST = [
 
 def bayes_array(data, prior, likelihood):
     """
-    applies Bayes' theorem to the observed data based on a list of priors and a given likelihood function
+    Applies Bayes' theorem to the observed data based on a list of priors and a given likelihood function
+
     :param data: measurement
     :param prior: (list of arrays)
     :param likelihood: (function)
@@ -48,7 +49,7 @@ def bayes_array(data, prior, likelihood):
 
 def prior_generator(p_stationary, mac_length):
     """
-    generates array of priors for use as first step in sequential Bayes
+    Generates array of priors for use as first step in sequential Bayes
 
     :param p_stationary: (float) between 0 and 1
     :param mac_length: (int) number of mac addresses used
@@ -77,21 +78,20 @@ def likelihood_function_generator(mac_address_df, feature, dev_type, plot=False)
     mac_address_high_count_df = mac_address_df[mac_address_df.frequency > 10]
     if dev_type == 'stationary':
         values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 1][feature].values.ravel()
-    if dev_type == 'shopper':
+    elif dev_type == 'shopper':
         values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 0][feature].values.ravel()
+    else:
+        raise Exception("The dev_type is not a valid entry. Needs to be either 'stationary' or 'shopper'")
     values = values[np.isfinite(values)]
-    #print(len(values))
     func = stats.kde.gaussian_kde(values)
     if plot:
         plot_dist(func, feature, np.amax(values))
-    integral = integrate.quad(func, 0, 100000)
-    #print(feature, integral)
     return func
 
 
 def likelihood_dictionary(feature_df, feature_list):
     """
-    generates a dictionary of likelihood functions for each feature in feature_list
+    Generates a dictionary of likelihood functions for each feature in feature_list
 
     :param feature_df: (df) data frame of observable measures
     :param feature_list: (list of strings) features measured
@@ -112,7 +112,7 @@ Analysis
 
 def sequential(prior, feature_df, feature_list):
     """
-    applies bayes_array in sequence for a range of observables
+    Applies bayes_array in sequence for a range of observables
 
     :param feature_list: (list of strings) list of features to be tested
     :param prior: (float) initial P(stationary)
@@ -133,10 +133,11 @@ def sequential(prior, feature_df, feature_list):
 
 def plot_probability_trace(prob_estimates, feature_list, stationary_percentage=[]):
     """
-    plots sequence of posterior probabilities
+    Plots sequence of posterior probabilities
 
     :param prob_estimates: data
     :param feature_list: (list of strings) list of features tested
+    :param stationary_percentage: (list)
     :return: None
     """
     stationary = [i[0] for i in prob_estimates]
@@ -198,7 +199,7 @@ def inference_progress(posteriors, feature_df, confidence, signal_df):
 
 def plot_dist(func, feature, max_value):
     """
-    plots likelihood function
+    Plots likelihood function
 
     :param func: likelihood function (output from likelihood_function_generator
     :param feature: (string) feature
@@ -347,15 +348,14 @@ def recursive_bayesian(feature_df, feature_list, prior, confidence, signal_df):
 
 def evaluate_recursion(rb, feature_df, plot=False):
     """
-    identifies mac addresses that are nominally stationary i.e. give signals out of hours but are then reclassified
-    as non-stationary by the the recursive Bayesian. Naively these could be the mall staff.
+    Identifies mac addresses that are nominally stationary i.e. give signals out of hours but are then reclassified
+    as non-stationary by the recursive Bayesian. Naively these could be the mall staff.
 
     :param rb:
     :param feature_df:
     :return:
     """
     out_of_hours = feature_df[feature_df.is_out_of_hours == 1].mac_address.tolist()
-    #in_hours = feature_df[feature_df.is_out_of_hours == 0].mac_address.tolist()
     flat_rb = [i for j in rb[0] for i in j]
     moving_out = [i for i in out_of_hours if i not in flat_rb]
     if plot:
@@ -387,7 +387,7 @@ def stationary_manufacturer(manufacturer_list, rb, feature_df):
 
 def subset_bayesian(subset_size, iterations, feature_df, feature_list, prior, confidence, signal_df):
     """
-    explores robustness of bayesian inference by considering random subsets of the data
+    Explores robustness of bayesian inference by considering random subsets of the data
 
     :param subset_size: (int) size of subset to be considered
     :param iterations: (int) how many random subsets to test
@@ -423,9 +423,8 @@ def subset_bayesian(subset_size, iterations, feature_df, feature_list, prior, co
     return stationary_macs, stationary_macs_by_iteration, times
 
 
-def subset_analysis(subset_bayesian_result, feature_df):
+def subset_analysis(subset_bayesian_result):
     sbr = subset_bayesian_result
-    #macs = feature_df.mac_address.tolist()
     breakdown = {mac: [info.count(True), info.count(False)] for mac, info in sbr.items()}
     inconsistent = {mac: info for mac, info in breakdown.items() if 0 not in info}
     empty = {mac: info for mac, info in breakdown.items() if len(info) == 0}
@@ -435,8 +434,8 @@ def subset_analysis(subset_bayesian_result, feature_df):
 
 def plot_subset(completely_consistent, inconsistent):
     """
-    plots pie chart to show fraction of consistently classified stationary devices
-    plots distribution of fractions among inconsistently classified devices
+    Plots pie chart to show fraction of consistently classified stationary devices
+    Plots distribution of fractions among inconsistently classified devices
 
     :param completely_consistent: (dictionary) macs corresponding to consistently classified devices
     :param inconsistent: (dictionary) macs corresponding to inconsistently classified devices
