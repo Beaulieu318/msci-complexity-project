@@ -157,35 +157,41 @@ def plot_probability_trace(prob_estimates, feature_list, stationary_percentage=[
         axes[0].set_ylim((0, 1))
     else:
         fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(18, 8))
-        for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
+        for mac in range(len(prob_estimates[0][0]) - 3000, len(prob_estimates[0][0])):
+        #for mac in range(500):
             y = [i[mac] for i in stationary]
             axes[0].plot(range(len(feature_list)), y)
-        for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
+        for mac in range(len(prob_estimates[0][0]) - 3000, len(prob_estimates[0][0])):
+        #for mac in range(500):
             y = [i[mac] for i in shopper]
             axes[1].plot(range(len(feature_list)), y)
-        axes[0].set_xlabel('Feature Sequence', fontsize=20)
+        #axes[0].set_xlabel('Feature Sequence', fontsize=20)
         axes[0].set_ylabel('P(Stationary)')
         axes[0].set_ylim((0, 1))
         axes[1].set_xlabel('Feature Sequence', fontsize=20)
         axes[1].set_ylabel('P(Shopper)')
         axes[1].set_ylim((0, 1))
-    plt.title('Sequential Bayesian Inference for Device Classification')
+        axes[0].set_xlim((0, len(FEATURE_LIST)))
+        axes[1].set_xlim((0, len(FEATURE_LIST)))
+    #plt.suptitle('Sequential Bayesian Inference for Device Classification')
     plt.xticks(range(len(feature_list)), feature_list, rotation='vertical')
     fig.tight_layout()
     fig.show()
 
 
-def inference_result_analysis(posteriors, feature_df, confidence, signal_df, stage=-1, plot_path=True):
+def inference_result_analysis(posteriors, feature_df, confidence, signal_df, stage=-1, plot_path=False):
     macs = feature_df.mac_address.tolist()
     manufacturers = feature_df.manufacturer.tolist()
     final_probabilities = posteriors[stage]
     stationary_condition = final_probabilities[0] > confidence
+    moving_condition = final_probabilities[1] > confidence
     stationary_devices = [macs[i] for i in range(len(stationary_condition)) if stationary_condition[i]]
+    moving_devices = [macs[i] for i in range(len(moving_condition)) if moving_condition[i]]
     stationary_manufacturer = [manufacturers[i] for i in range(len(stationary_condition)) if stationary_condition[i]]
     print('Number of Stationary Devices = ', len(stationary_devices))
     if plot_path:
         pfun.plot_path(signal_df, stationary_devices[:30])
-    return stationary_manufacturer, stationary_devices
+    return stationary_manufacturer, stationary_devices, moving_devices
 
 
 def inference_progress(posteriors, feature_df, confidence, signal_df):
@@ -213,6 +219,20 @@ def plot_dist(func, feature, max_value):
     plt.xlabel(feature)
     plt.ylabel('PDF')
     fig.show()
+
+
+def entirely_stationary_devices(mm_df):
+    macs = mm_df.mac_address.drop_duplicates().tolist()
+    grouped = mm_df.groupby('mac_address')
+    stat = []
+    for mac in macs:
+        group = grouped.get_group(mac)
+        if len(group) > 10:
+            x = group.x.tolist()
+            y = group.y.tolist()
+            if len(set(x)) < 5 and len(set(y)) < 5:
+                stat.append(mac)
+    return stat
 
 
 def kolmogorov_smirnov(feature_df, feature, x_max):
@@ -261,7 +281,7 @@ def kde_test(feature_df, feature, dev_type):
     x = np.linspace(0, 1.2*max_value, num=1000)
     y = [function(i) for i in x]
     fig = plt.figure()
-    plt.hist(data, bins=80, normed=True)
+    plt.hist(data, bins=25, normed=True)
     plt.plot(x, y)
     fig.show()
 
@@ -423,6 +443,29 @@ def subset_bayesian(subset_size, iterations, feature_df, feature_list, prior, co
     return stationary_macs, stationary_macs_by_iteration, times
 
 
+def subset_bayesian_without_convergence(subset_size, iterations, feature_df, feature_list, prior, confidence, signal_df):
+    shopper_macs_by_iteration = {}
+    all_macs = feature_df.mac_address.tolist()
+    shopper_macs = {}
+    for mac in all_macs:
+        shopper_macs[mac] = []
+    for i in range(iterations):
+        print(i)
+        random_indices = np.random.choice(np.arange(len(feature_df)), size=subset_size)
+        random_macs = [all_macs[mac] for mac in range(len(feature_df)) if mac in random_indices]
+        random_feature_df = feature_df[feature_df.index.isin(random_indices)]
+        s = sequential(prior, random_feature_df, feature_list)
+        ira = inference_result_analysis(s, random_feature_df, confidence, signal_df)
+        print(len(ira[2]))
+        shopper_macs_by_iteration[str(i)] = [random_macs, ira[2]]
+        for j in random_macs:
+            if j in ira[2]:
+                shopper_macs[j].append(True)
+            else:
+                shopper_macs[j].append(False)
+    return shopper_macs, shopper_macs_by_iteration
+
+
 def subset_analysis(subset_bayesian_result):
     sbr = subset_bayesian_result
     breakdown = {mac: [info.count(True), info.count(False)] for mac, info in sbr.items()}
@@ -462,3 +505,17 @@ def principal_component_analysis(feature_df, feature_list):
     variance = pca.explained_variance_ratio_
     singular = pca.singular_values_
     return feature_data, data_pca, pca, variance, singular
+
+
+def naive_bayes(feature_df, feature_list, prior):
+    macs = feature_df.mac_address.tolist()
+    feature_likelihoods = likelihood_dictionary(feature_df, feature_list)
+    posteriors = {}
+    for mac in macs:
+        sub_df = feature_df[feature_df.mac_address == mac]
+        stat_likelihoods = [feature_likelihoods[feature][0](sub_df[feature]) for feature in feature_list]
+        mov_likelihoods = [feature_likelihoods[feature][1](sub_df[feature]) for feature in feature_list]
+        stat_likelihood_product = np.prod(stat_likelihoods)
+        mov_likelihood_product = np.prod(mov_likelihoods)
+        posteriors[mac] = [stat_likelihood_product*prior, mov_likelihood_product*(1-prior)]
+    return posteriors
