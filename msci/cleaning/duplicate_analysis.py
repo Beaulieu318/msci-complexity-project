@@ -87,17 +87,19 @@ def period_plot(p_analysis, feature_df):
 
 
 def identify_duplicate_data(df):
-    df['manufacturer'] = utils.add_device_type_signal(df)
+    #df['manufacturer'] = utils.add_device_type_signal(df)
     macs = df.mac_address.drop_duplicates().tolist()
     df = df.sort_values('date_time')
     grouped = df.groupby('mac_address')
     time_duplicate_boolean = []
     duplicates = []
+    no_dup = 0
     for mac in macs:
-        print(mac)
+        #print(mac)
         group = grouped.get_group(mac)
         times = group.date_time.tolist()
         time_dup = [times[i] == times[i+1] for i in range(len(times) - 1)]
+        no_dup += time_dup.count(True)
         indices = [i for i, x in enumerate(time_dup) if x]
         dup = time_dup.count(True) >= 1
         if dup:
@@ -108,7 +110,7 @@ def identify_duplicate_data(df):
         time_duplicate_boolean.append(dup)
     duplicate_macs = [macs[i] for i in range(len(macs)) if time_duplicate_boolean[i]]
     duplicates = [i for i in duplicates if len(i[1]) > 0]
-    return df, duplicate_macs, duplicates
+    return df, duplicate_macs, duplicates, no_dup
 
 
 def analyse_duplicates(grouped_df, duplicate_mac, duplicate_indices, plot=True):
@@ -120,7 +122,7 @@ def analyse_duplicates(grouped_df, duplicate_mac, duplicate_indices, plot=True):
     x = [[i[1][0] for i in j] for j in dup]
     y = [[i[1][1] for i in j] for j in dup]
     if plot:
-        pfun.plot_points_on_map(x, y)
+        pfun.plot_points_on_map(x, y, label=True)
     return dup, x, y
 
 
@@ -146,9 +148,9 @@ def duplicate_point_continuity(df, duplicate_mac, duplicate_indices):
 
 
 def position_difference_analysis(df, duplicates, distances=False):
-    grouped = df.grouby('mac_address')
+    grouped = df.groupby('mac_address')
     t0 = time.time()
-    dups = [analyse_duplicates(grouped, i[0], i[1], plot=False)[0] for i in duplicates[:200]]
+    dups = [analyse_duplicates(grouped, i[0], i[1], plot=False)[0] for i in duplicates[:5000]]
     print(time.time() - t0)
     distance_dist = []
     if distances:
