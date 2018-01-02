@@ -361,7 +361,7 @@ def recursive_bayesian(feature_df, feature_list, prior, confidence, signal_df):
         print('count', count)
         stationary_threshold = len(stationary_devices)
         print('stationary threshold', stationary_threshold)
-    flat_stationary = [i for j in all_stationary for i in j]
+        flat_stationary = [i for j in all_stationary for i in j]
     all_shopper = [i for i in all_macs if i not in flat_stationary]
     return all_stationary, all_shopper, flat_stationary, stationary_threshold
 
@@ -519,3 +519,27 @@ def naive_bayes(feature_df, feature_list, prior):
         mov_likelihood_product = np.prod(mov_likelihoods)
         posteriors[mac] = [stat_likelihood_product*prior, mov_likelihood_product*(1-prior)]
     return posteriors
+
+
+def hex_to_bin(mac):
+    n = int(mac.replace(':', ''), 16)
+    binary = bin(n)
+    binary = binary[0] + '0' + binary[2:]
+    return binary
+
+
+def reverse_mac(mac):
+    binary = hex_to_bin(mac)
+    split_bin = [binary[8*i:(8*i + 8)] for i in range(6)]
+    split_bin_reverse = [i[::-1] for i in split_bin]
+    reverse = ''.join(split_bin_reverse)
+    n = int(reverse, 2)
+    mac = '%012x'%n
+    mac = [mac[2*i:(2*i+2)] for i in range(6)]
+    formatted_mac = mac[0]
+    for i in range(1, 6):
+        formatted_mac += ':'
+        formatted_mac += mac[i]
+    print(binary)
+    print(split_bin)
+    return formatted_mac
