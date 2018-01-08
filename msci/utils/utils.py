@@ -7,7 +7,7 @@ COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
-def import_signals(mall='Mall of Mauritius', version='3', signal_type=None):
+def import_signals(mall='Mall of Mauritius', version=3, signal_type=None):
     """
     Imports the signals of all the devices from a particular mall.
     The data can be downloaded from google drive:
@@ -18,17 +18,17 @@ def import_signals(mall='Mall of Mauritius', version='3', signal_type=None):
     :param signal_type: (int) 1: shopper, 0: non-shopper, 0.5: not classified (there is a 0.05 confidence level)
     :return: (pd.DataFrame) the signals
     """
-    if version == '1':
+    if version == 1:
         signal_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
         signal_df.date_time = signal_df.date_time.astype('datetime64[ns]')
         signal_df = signal_df[signal_df['location'] == mall]
         signal_df = signal_df.sort_values('date_time')
-    elif version == '2':
+    elif version == 2:
         signal_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016v2.csv', usecols=COLUMNS_TO_IMPORT)
         signal_df.date_time = signal_df.date_time.astype('datetime64[ns]')
         signal_df = signal_df[signal_df['location'] == mall]
         signal_df = signal_df.sort_values('date_time')
-    elif version == '3':
+    elif version == 3:
         malls = {
             'Mall of Mauritius': 'mauritius',
             'Phoenix Mall': 'phoenix',
