@@ -300,15 +300,18 @@ def find_start_end_coordinate(signal_df, mac_address_df):
     return start_coordinates, end_coordinates
 
 
-def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
+def create_mac_address_features(signal_df=None, mall='Mall of Mauritius', export_location=None):
     """
     Creates the mac address features dataframe which is used to determine whether the device is a shopper
 
+    :param signal_df: (pd.DataFrame) contains the all the signals or the signals of each mall
     :param mall: (string) The name of the mall
     :param export_location: (string or None) The location of where this is exported
     :return: (pd.DataFrame) If export location is None, returns the dataframe created
     """
-    signal_df = utils.import_signals(mall)
+    if signal_df is None:
+        signal_df = utils.import_signals(mall)
+
     mac_address_df = create_mac_address_df(signal_df)
     mac_address_df['centroid'], \
         mac_address_df['radius_of_gyration'] = \
@@ -333,6 +336,7 @@ def create_mac_address_features(mall='Mall of Mauritius', export_location=None):
         mac_address_df['end_coordinate'] = \
         find_start_end_coordinate(signal_df, mac_address_df)
     add_wifi_type(signal_df, mac_address_df)
+
     if export_location:
         mac_address_df.to_csv(export_location, index=False)
     else:

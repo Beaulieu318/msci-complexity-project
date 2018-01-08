@@ -221,7 +221,7 @@ def duplicate_fill(df, largest_separation):
 
 def all_mall_duplicate_fill(largest_separation):
     malls = ['Mall of Mauritius', 'Phoenix Mall', 'Home & Leisure']
-    old_dfs = [utils.import_signals(mall, v1=True) for mall in malls]
+    old_dfs = [utils.import_signals(mall, version=1) for mall in malls]
     new_dfs = []
     for df in old_dfs:
         new_dfs.append(duplicate_fill(df, largest_separation))
