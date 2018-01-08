@@ -59,6 +59,7 @@ def plot_time(df, minute_resolution, signal=True):
         plt.ylabel('Device Count')
         plt.show()
 
+
 def likelihoods(feature_df, feature):
     feature_df = feature_df[feature_df.frequency > 10]
     in_hours_df = feature_df[feature_df.is_out_of_hours == 0]

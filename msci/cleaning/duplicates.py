@@ -87,7 +87,6 @@ def period_plot(p_analysis, feature_df):
 
 
 def identify_duplicate_data(df):
-    #df['manufacturer'] = utils.add_device_type_signal(df)
     macs = df.mac_address.drop_duplicates().tolist()
     df = df.sort_values('date_time')
     grouped = df.groupby('mac_address')
@@ -95,7 +94,6 @@ def identify_duplicate_data(df):
     duplicates = []
     no_dup = 0
     for mac in macs:
-        #print(mac)
         group = grouped.get_group(mac)
         times = group.date_time.tolist()
         time_dup = [times[i] == times[i+1] for i in range(len(times) - 1)]
@@ -167,6 +165,7 @@ def duplicate_fill(df, largest_separation):
     function to account for data points that have identical times but different positions
     if discrepancy in position is greater than 'largest_separation', the position that minimises the deviation from
     path is kept. if discrepancy is less the 'largest_separation', the average of the positions is used.
+
     :param df: (pd.DataFrame) dirty data frame
     :param largest_separation: (int) largest distance threshold for analysis
     :return: (pd.DataFrame) the original DataFrame without two location at the same time
