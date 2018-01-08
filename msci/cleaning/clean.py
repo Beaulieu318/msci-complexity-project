@@ -35,6 +35,15 @@ def find_label(x):
 
 
 def get_clean_data():
+    """
+    Full clean of the signals data and find the probability of each device being a shopper.
+    The cleaned signals data is output in the data folder and is called `bag_mus_12-22-2016v3.csv`.
+    The mac addresses have been labelled with value of 1, 0.5, and 0 given a 5% confidence interval
+    that they are shoppers.
+    All mac address dataframe are saved to separate csv for each mall.
+
+    :return: (list(dict)) each mall and then the title, file_name and df
+    """
     signal_df = duplicates.all_mall_duplicate_fill(largest_separation=15)
     signal_df.to_csv(dir_path + '/../data/bag_mus_12-22-2016v3.csv', index=False)
 
