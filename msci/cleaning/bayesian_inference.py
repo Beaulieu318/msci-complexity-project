@@ -23,6 +23,10 @@ FEATURE_LIST = [
     'av_straightness',
 ]
 
+"""
+Bayesian Inference functions
+"""
+
 
 def bayes_array(data, prior, likelihood):
     """
@@ -231,36 +235,9 @@ def entirely_stationary_devices(mm_df):
     return stat
 
 
-def kolmogorov_smirnov(feature_df, feature, x_max):
-    like_stationary = likelihood_function_generator(feature_df, feature, 'stationary', plot=False)
-    like_shopper = likelihood_function_generator(feature_df, feature, 'shopper', plot=False)
-    stationary_vals = np.array([like_stationary(i) for i in np.linspace(0, x_max, num=100)])
-    shopper_vals = np.array([like_shopper(i) for i in np.linspace(0, x_max, num=100)])
-    stationary_pdf = np.cumsum(stationary_vals)
-    shopper_pdf = np.cumsum(shopper_vals)
-    ks = stats.ks_2samp(stationary_pdf, shopper_pdf)
-    return ks
-
-
-def ks_results(feature_df, feature_list, statistic=True):
-    x_max = [np.nanmax(feature_df[i].values) for i in feature_list]
-    if statistic:
-        ks = [kolmogorov_smirnov(feature_df, feature_list[i], x_max[i]).statistic for i in range(len(feature_list))]
-    else:
-        ks = [kolmogorov_smirnov(feature_df, feature_list[i], x_max[i]).pvalue for i in range(len(feature_list))]
-    fig = plt.figure()
-    plt.scatter(range(len(feature_list)), ks)
-    plt.xticks(range(len(feature_list)), feature_list, rotation='vertical')
-    plt.xlabel('Feature Type')
-    plt.ylabel('KS-Test p-value')
-    fig.tight_layout()
-    fig.show()
-    return ks
-
-
 def kde_test(feature_df, feature, dev_type):
     """
-    compares the kde fit function to the numerical pdf generated from data
+    Compares the kde fit function to the numerical pdf generated from data
 
     :param feature_df: mac address data frame
     :param feature: feature tested
@@ -321,6 +298,33 @@ def ks_statistic(feature_df, feature_list):
     plt.xticks(rotation='45')
 
 
+def kolmogorov_smirnov(feature_df, feature, x_max):
+    like_stationary = likelihood_function_generator(feature_df, feature, 'stationary', plot=False)
+    like_shopper = likelihood_function_generator(feature_df, feature, 'shopper', plot=False)
+    stationary_vals = np.array([like_stationary(i) for i in np.linspace(0, x_max, num=100)])
+    shopper_vals = np.array([like_shopper(i) for i in np.linspace(0, x_max, num=100)])
+    stationary_pdf = np.cumsum(stationary_vals)
+    shopper_pdf = np.cumsum(shopper_vals)
+    ks = stats.ks_2samp(stationary_pdf, shopper_pdf)
+    return ks
+
+
+def ks_results(feature_df, feature_list, statistic=True):
+    x_max = [np.nanmax(feature_df[i].values) for i in feature_list]
+    if statistic:
+        ks = [kolmogorov_smirnov(feature_df, feature_list[i], x_max[i]).statistic for i in range(len(feature_list))]
+    else:
+        ks = [kolmogorov_smirnov(feature_df, feature_list[i], x_max[i]).pvalue for i in range(len(feature_list))]
+    fig = plt.figure()
+    plt.scatter(range(len(feature_list)), ks)
+    plt.xticks(range(len(feature_list)), feature_list, rotation='vertical')
+    plt.xlabel('Feature Type')
+    plt.ylabel('KS-Test p-value')
+    fig.tight_layout()
+    fig.show()
+    return ks
+
+
 def venn_diagram(mac_list, set_labels):
     fig = plt.figure()
     sets = [set(i) for i in mac_list]
@@ -330,6 +334,11 @@ def venn_diagram(mac_list, set_labels):
         venn.venn3(sets, set_labels)
     fig.tight_layout()
     fig.show()
+
+
+"""
+Bayesian Inference tests
+"""
 
 
 def recursive_bayesian(feature_df, feature_list, prior, confidence, signal_df):
@@ -369,6 +378,7 @@ def evaluate_recursion(rb, feature_df, plot=False):
 
     :param rb:
     :param feature_df:
+    :param plot:
     :return:
     """
     out_of_hours = feature_df[feature_df.is_out_of_hours == 1].mac_address.tolist()
@@ -380,9 +390,9 @@ def evaluate_recursion(rb, feature_df, plot=False):
     return moving_out, moving_out_df
 
 
-def stationary_manufacturer(manufacturer_list, rb, feature_df):
+def plot_stationary_manufacturer(manufacturer_list, rb, feature_df):
     """
-
+    Plot the stationary manufacturers on a venn diagram.
 
     :param manufacturer_list:
     :param rb:
@@ -493,6 +503,11 @@ def plot_subset(completely_consistent, inconsistent):
     fig.show()
 
 
+"""
+Feature independence test
+"""
+
+
 def principal_component_analysis(feature_df, feature_list):
     feature_data = [feature_df[feature].tolist() for feature in feature_list]
     data_pca = np.array(list(map(list, zip(*feature_data))))
@@ -501,6 +516,11 @@ def principal_component_analysis(feature_df, feature_list):
     variance = pca.explained_variance_ratio_
     singular = pca.singular_values_
     return feature_data, data_pca, pca, variance, singular
+
+
+"""
+Naive Bayes
+"""
 
 
 def naive_bayes(feature_df, feature_list, prior):
@@ -515,6 +535,11 @@ def naive_bayes(feature_df, feature_list, prior):
         mov_likelihood_product = np.prod(mov_likelihoods)
         posteriors[mac] = [stat_likelihood_product*prior, mov_likelihood_product*(1-prior)]
     return posteriors
+
+
+"""
+Reverse mac address test
+"""
 
 
 def hex_to_bin(mac):
