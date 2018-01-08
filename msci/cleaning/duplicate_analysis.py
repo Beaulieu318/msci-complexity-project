@@ -279,5 +279,3 @@ def plot_unrealistic_speeds(df, ht):
         xs.append(x)
         ys.append(y)
     pfun.plot_points_on_map(xs, ys)
-
-
