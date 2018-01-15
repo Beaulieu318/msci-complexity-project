@@ -131,49 +131,29 @@ def sequential(prior, feature_df, feature_list):
     return prob_estimates
 
 
-def plot_probability_trace(prob_estimates, feature_list, stationary_percentage=[]):
+def plot_probability_trace(prob_estimates, feature_list):
     """
     Plots sequence of posterior probabilities
 
     :param prob_estimates: data
     :param feature_list: (list of strings) list of features tested
-    :param stationary_percentage: (list)
-    :return: None
     """
     stationary = [i[0] for i in prob_estimates]
     shopper = [i[1] for i in prob_estimates]
-    print(feature_list)
-    if len(stationary_percentage) > 0:
-        fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(18, 8))
-        axes[1].plot(range(len(feature_list)), stationary_percentage, linewidth=5)
-        axes[1].set_xlabel('Feature Sequence', fontsize=20)
-        axes[1].set_ylabel('Percentage of Stationary Devices (SL)')
-        axes[1].set_ylim((0, 1.2*np.amax(stationary_percentage)))
-        for mac in range(len(prob_estimates[0][0]) - 500, len(prob_estimates[0][0])):
-            y = [i[mac] for i in stationary]
-            axes[0].plot(range(len(feature_list)), y)
-        axes[0].set_xlabel('Feature Sequence', fontsize=20)
-        axes[0].set_ylabel('P(Stationary)')
-        axes[0].set_ylim((0, 1))
-    else:
-        fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(18, 8))
-        for mac in range(len(prob_estimates[0][0]) - 3000, len(prob_estimates[0][0])):
-        #for mac in range(500):
-            y = [i[mac] for i in stationary]
-            axes[0].plot(range(len(feature_list)), y)
-        for mac in range(len(prob_estimates[0][0]) - 3000, len(prob_estimates[0][0])):
-        #for mac in range(500):
-            y = [i[mac] for i in shopper]
-            axes[1].plot(range(len(feature_list)), y)
-        #axes[0].set_xlabel('Feature Sequence', fontsize=20)
-        axes[0].set_ylabel('P(Stationary)')
-        axes[0].set_ylim((0, 1))
-        axes[1].set_xlabel('Feature Sequence', fontsize=20)
-        axes[1].set_ylabel('P(Shopper)')
-        axes[1].set_ylim((0, 1))
-        axes[0].set_xlim((0, len(FEATURE_LIST)))
-        axes[1].set_xlim((0, len(FEATURE_LIST)))
-    #plt.suptitle('Sequential Bayesian Inference for Device Classification')
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(18, 8))
+    for mac in range(len(prob_estimates[0][0]) - 3000, len(prob_estimates[0][0])):
+        y = [i[mac] for i in stationary]
+        axes[0].plot(range(len(feature_list)), y)
+    for mac in range(len(prob_estimates[0][0]) - 3000, len(prob_estimates[0][0])):
+        y = [i[mac] for i in shopper]
+        axes[1].plot(range(len(feature_list)), y)
+    axes[0].set_ylabel('P(Stationary)')
+    axes[0].set_ylim((0, 1))
+    axes[1].set_xlabel('Feature Sequence', fontsize=20)
+    axes[1].set_ylabel('P(Shopper)')
+    axes[1].set_ylim((0, 1))
+    axes[0].set_xlim((0, len(FEATURE_LIST)))
+    axes[1].set_xlim((0, len(FEATURE_LIST)))
     plt.xticks(range(len(feature_list)), feature_list, rotation='vertical')
     fig.tight_layout()
     fig.show()
@@ -245,14 +225,16 @@ def kde_test(feature_df, feature, dev_type):
     :return: None
     """
     if dev_type == 'stationary':
-        function = likelihood_function_generator(feature_df, feature, dev_type='stationary')
+        likelihood_function = likelihood_function_generator(feature_df, feature, dev_type='stationary')
         data = feature_df[feature_df.is_out_of_hours == 1][feature].tolist()
-    if dev_type == 'shopper':
-        function = likelihood_function_generator(feature_df, feature, dev_type='shopper')
+    elif dev_type == 'shopper':
+        likelihood_function = likelihood_function_generator(feature_df, feature, dev_type='shopper')
         data = feature_df[feature_df.is_out_of_hours == 0][feature].tolist()
+    else:
+        raise Exception('No dev_type selected: variable can be `stationary` or `shopper`')
     max_value = np.amax(data)
     x = np.linspace(0, 1.2*max_value, num=1000)
-    y = [function(i) for i in x]
+    y = [likelihood_function(i) for i in x]
     fig = plt.figure()
     plt.hist(data, bins=25, normed=True)
     plt.plot(x, y)
@@ -356,6 +338,7 @@ def recursive_bayesian(feature_df, feature_list, prior, confidence, signal_df):
     stationary_threshold = 1
     all_stationary = []
     count = 2
+    flat_stationary = []
     while stationary_threshold > 0 and count > 1:
         post = sequential(prior, feature_df, feature_list)
         prog = inference_result_analysis(post, feature_df, confidence, signal_df, stage=-1, plot_path=False)
@@ -524,6 +507,14 @@ Naive Bayes
 
 
 def naive_bayes(feature_df, feature_list, prior):
+    """
+    Calculates the posteriors using naive bayes
+
+    :param feature_df: (pd.DataFrame) the mac addresses and their features
+    :param feature_list: (pd.DataFrame) the features that are used in the classification
+    :param prior: (pd.DataFrame) the prior probability for the stationary (non-shopper) devices
+    :return:
+    """
     macs = feature_df.mac_address.tolist()
     feature_likelihoods = likelihood_dictionary(feature_df, feature_list)
     posteriors = {}
@@ -543,6 +534,12 @@ Reverse mac address test
 
 
 def hex_to_bin(mac):
+    """
+    Converts a mac address into binary
+
+    :param mac: (str) the mac address
+    :return: (str) the binary representation of the mac address
+    """
     n = int(mac.replace(':', ''), 16)
     binary = bin(n)
     binary = binary[0] + '0' + binary[2:]
@@ -550,12 +547,18 @@ def hex_to_bin(mac):
 
 
 def reverse_mac(mac):
+    """
+    Reverses the mac address to check for strange mac addresses
+
+    :param mac: (str) the mac address
+    :return: (str) the reversed formatted mac address
+    """
     binary = hex_to_bin(mac)
     split_bin = [binary[8*i:(8*i + 8)] for i in range(6)]
     split_bin_reverse = [i[::-1] for i in split_bin]
     reverse = ''.join(split_bin_reverse)
     n = int(reverse, 2)
-    mac = '%012x'%n
+    mac = '%012x' % n
     mac = [mac[2*i:(2*i+2)] for i in range(6)]
     formatted_mac = mac[0]
     for i in range(1, 6):
