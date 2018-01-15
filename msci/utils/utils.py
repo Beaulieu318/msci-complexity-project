@@ -124,6 +124,12 @@ def time_difference(t0, t1):
     return tdelta.seconds
 
 
+def centroid(position_list):
+    x = [i[0] for i in position_list]
+    y = [i[1] for i in position_list]
+    return [np.mean(x), np.mean(y)]
+
+
 def add_manufacturer_to_signal(signal_df):
     """
     Returns a list containing the manufacturer for each signal in the signal_df
