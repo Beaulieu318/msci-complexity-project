@@ -160,6 +160,63 @@ def position_difference_analysis(df, duplicates, distances=False):
         return dups
 
 
+def higher_order_duplicate_fill(df, velocity_limit, triangulation_error):
+    all_macs = df.mac_address.drop_duplicates().tolist()
+    print(len(all_macs))
+    grouped = df.groupby('mac_address')
+    groups = [grouped.get_group(i) for i in all_macs]
+    macs = [all_macs[i] for i in range(len(all_macs)) if len(groups[i]) > 1]
+    groups = [g for g in groups if len(g) > 1]
+    print(len(groups))
+    time_culprits = []
+    time_culprits_error = []
+    for g in range(len(groups)):
+        ts = []
+        ts_error = []
+        x = groups[g].x.tolist()
+        y = groups[g].y.tolist()
+        pos = list(zip(x, y))
+        times = groups[g].date_time.tolist()
+        delta_t = np.array([utils.time_difference(times[i], times[i+1]) for i in range(len(times)-1)])
+        euclideans = np.array([utils.euclidean_distance(pos[i], pos[i + 1]) for i in range(len(pos) - 1)])
+        euclideans_error = euclideans - 2*triangulation_error*np.ones(len(euclideans))
+        velocities = euclideans/delta_t
+        velocities_error = euclideans_error/delta_t
+        for v in range(len(velocities)):
+            if velocities[v] > velocity_limit:
+                ts.append((delta_t[v], times[v], times[v+1], pos[v], pos[v+1]))
+        time_culprits.append(ts)
+        for v in range(len(velocities)):
+            if velocities_error[v] > velocity_limit:
+                ts_error.append(v)
+        if len(ts_error) > 1:
+            time_culprits_error.append([macs[g], ts_error, len(groups[g]), groups[g].mac_address.unique()])
+    return time_culprits_error
+
+
+def plot_unrealistic_speeds(df, ht):
+    grouped = df.groupby('mac_address')
+    macs = [i[0] for i in ht]
+    groups = [grouped.get_group(i) for i in macs]
+    groups = [g for g in groups if len(g) > 1]
+    xs = []
+    ys = []
+    for g in range(len(groups)):
+        print(g)
+        x = groups[g].x.tolist()
+        y = groups[g].y.tolist()
+        x = [x[i] for i in range(len(x)) if i in ht[0][g][1]]
+        y = [y[i] for i in range(len(y)) if i in ht[0][g][1]]
+        xs.append(x)
+        ys.append(y)
+    pfun.plot_points_on_map(xs, ys)
+
+
+"""
+Main functions to clean the signals from miscellaneous points
+"""
+
+
 def duplicate_fill(df, largest_separation):
     """
     function to account for data points that have identical times but different positions
@@ -219,62 +276,17 @@ def duplicate_fill(df, largest_separation):
     return merged_df
 
 
-def all_mall_duplicate_fill(largest_separation):
+def all_mall_duplicate_fill(largest_separation=15):
+    """
+    Deduplicate all the mall sequentially using a maximum speration of `largest_separation`.
+    This imports the data using utils.import_signals
+
+    :param largest_separation: (int) The largest error between points that is allowed
+    :return: (pd.DataFrame) A cleaned concatenated signals dataframe containing all the malls
+    """
     malls = ['Mall of Mauritius', 'Phoenix Mall', 'Home & Leisure']
     old_dfs = [utils.import_signals(mall, version=1) for mall in malls]
     new_dfs = []
     for df in old_dfs:
         new_dfs.append(duplicate_fill(df, largest_separation))
     return pd.concat(new_dfs)
-
-
-def higher_order_duplicate_fill(df, velocity_limit, triangulation_error):
-    all_macs = df.mac_address.drop_duplicates().tolist()
-    print(len(all_macs))
-    grouped = df.groupby('mac_address')
-    groups = [grouped.get_group(i) for i in all_macs]
-    macs = [all_macs[i] for i in range(len(all_macs)) if len(groups[i]) > 1]
-    groups = [g for g in groups if len(g) > 1]
-    print(len(groups))
-    time_culprits = []
-    time_culprits_error = []
-    for g in range(len(groups)):
-        ts = []
-        ts_error = []
-        x = groups[g].x.tolist()
-        y = groups[g].y.tolist()
-        pos = list(zip(x, y))
-        times = groups[g].date_time.tolist()
-        delta_t = np.array([utils.time_difference(times[i], times[i+1]) for i in range(len(times)-1)])
-        euclideans = np.array([utils.euclidean_distance(pos[i], pos[i + 1]) for i in range(len(pos) - 1)])
-        euclideans_error = euclideans - 2*triangulation_error*np.ones(len(euclideans))
-        velocities = euclideans/delta_t
-        velocities_error = euclideans_error/delta_t
-        for v in range(len(velocities)):
-            if velocities[v] > velocity_limit:
-                ts.append((delta_t[v], times[v], times[v+1], pos[v], pos[v+1]))
-        time_culprits.append(ts)
-        for v in range(len(velocities)):
-            if velocities_error[v] > velocity_limit:
-                ts_error.append(v)
-        if len(ts_error) > 1:
-            time_culprits_error.append([macs[g], ts_error, len(groups[g]), groups[g].mac_address.unique()])
-    return time_culprits_error
-
-
-def plot_unrealistic_speeds(df, ht):
-    grouped = df.groupby('mac_address')
-    macs = [i[0] for i in ht]
-    groups = [grouped.get_group(i) for i in macs]
-    groups = [g for g in groups if len(g) > 1]
-    xs = []
-    ys = []
-    for g in range(len(groups)):
-        print(g)
-        x = groups[g].x.tolist()
-        y = groups[g].y.tolist()
-        x = [x[i] for i in range(len(x)) if i in ht[0][g][1]]
-        y = [y[i] for i in range(len(y)) if i in ht[0][g][1]]
-        xs.append(x)
-        ys.append(y)
-    pfun.plot_points_on_map(xs, ys)
