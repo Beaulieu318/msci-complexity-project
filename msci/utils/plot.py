@@ -6,6 +6,9 @@ import math
 import numpy as np
 from scipy.optimize import fmin
 import matplotlib.cm as cm
+from tempfile import mkstemp, mkdtemp
+from imageio import imread, mimsave
+from matplotlib.pyplot import clf
 
 from msci.utils.animation import RealShoppersAnimation
 
@@ -288,3 +291,77 @@ def plot_circles(list_of_circles, manufacturers, splits):
     plt.xlim((-70, 70))
     plt.ylim((-70, 70))
     fig.show()
+
+
+"""
+Network plots and images of people in shop
+"""
+
+
+def create_count_of_shoppers_image(count_of_shoppers, frame_times, count_index=10, output_fig=False):
+    """
+    Creates a image of the count of shoppers at a particular frame (time)
+
+    :param count_of_shoppers: (dict) key: all the shops, values: count, x, y, index
+    :param frame_times: (dict) key: frame number, value: date time
+    :param count_index: (int) the current frame for the image
+    :param output_fig: (bool) use True in create_count_of_shoppers_gif function
+    """
+    fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(20, 10))
+
+    img = mpimg.imread("../../images/mall_of_mauritius_map.png")
+    axes.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
+
+    colors = iter(cm.rainbow(np.linspace(0, 1, len(count_of_shoppers[count_index]))))
+    for key in count_of_shoppers[count_index]:
+        axes.scatter(
+            count_of_shoppers[count_index][key]['x'],
+            count_of_shoppers[count_index][key]['y'],
+            s=count_of_shoppers[count_index][key]['count'] * 5,
+            color=next(colors),
+            label=key
+        )
+
+    axes.set_title('Mall of Mauritius: {}'.format(frame_times[count_index]), fontsize=20)
+    axes.set_xlabel('x (m)', fontsize=15)
+    axes.set_ylabel('y (m)', fontsize=15)
+    axes.set_xlim((0, 350))
+    axes.set_ylim((0, 200))
+    # axes.legend(loc='upper center', markerscale=1., ncol=15, bbox_to_anchor=(0.5, -0.1))
+
+    if output_fig:
+        return fig
+
+
+def create_count_of_shoppers_gif(count_of_shoppers, frame_times, gif_filename='count_of_shopper'):
+    """
+    Creates the GIF of the count of shoppers at different shops over the day
+
+    :param count_of_shoppers: (dict) key: all the shops, values: count, x, y, index
+    :param frame_times: (dict) key: frame number, value: date time
+    :param gif_filename: (str) the filename for the GIF
+    """
+    tempdir = mkdtemp()
+
+    pngs = []
+
+    for frame in range(len(count_of_shoppers)):
+        fig = create_count_of_shoppers_image(
+            count_of_shoppers,
+            frame_times,
+            count_index=frame,
+            output_fig=True
+        )
+
+        _, filename = mkstemp(dir=tempdir)
+        filename += '.png'
+
+        fig.savefig(filename)
+        clf()  # clear figure
+        pngs.append(filename)
+
+    images = []
+    for png in pngs:
+        img = imread(png)
+        images.append(img)
+    mimsave('{}.gif'.format(gif_filename), images, duration=0.5)
