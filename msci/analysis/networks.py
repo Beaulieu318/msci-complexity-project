@@ -8,7 +8,7 @@ def create_adjacency_matrices(signal_df, sliding_interval=30, window_size=60):
     """
     Creates an array of adjacency matrices which find the number of shopper which move from shop i to shop j
 
-    :param signal_df: (pd.DataFrame) the number of signals in the dataframe
+    :param signal_df: (pd.DataFrame) contains all the signals from a given mall
     :param sliding_interval: (int) the number of minutes between each sampled window
     :param window_size: (int) the size of the window in minutes
     :return: (np.array) an array of adjacency matrices which increase in time with intervals of `sliding_interval`
@@ -98,7 +98,7 @@ def count_shoppers_in_store(signal_matrix, store_dict):
 
 def calculate_average_store_position(signal_df, store_dict):
     """
-    :param signal_df:
+    :param signal_df: (pd.DataFrame) contains all the signals from a given mall
     :param store_dict: 
     :return: 
     """
@@ -111,6 +111,10 @@ def calculate_average_store_position(signal_df, store_dict):
 
 
 def calculate_total_count_of_shoppers(signal_df):
+    """
+    :param signal_df: (pd.DataFrame) contains all the signals from a given mall
+    :return:
+    """
     signal_df = signal_df[
         (signal_df.date_time.dt.time > pd.Timestamp('7:00:00').time())
     ]
