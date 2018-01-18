@@ -317,7 +317,7 @@ def create_count_of_shoppers_image(count_of_shoppers, frame_times, count_index=1
         axes.scatter(
             count_of_shoppers[count_index][key]['x'],
             count_of_shoppers[count_index][key]['y'],
-            s=count_of_shoppers[count_index][key]['count'] * 5,
+            s=count_of_shoppers[count_index][key]['frequency'] * 5,
             color=next(colors),
             label=key
         )

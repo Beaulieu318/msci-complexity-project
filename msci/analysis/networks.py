@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 
 def create_adjacency_matrices(signal_df, sliding_interval=30, window_size=60):
@@ -27,11 +28,14 @@ def create_adjacency_matrices(signal_df, sliding_interval=30, window_size=60):
 
     start_time = min(signal_df.date_time)
     end_time = max(signal_df.date_time)
-    window_start_time = start_time
 
-    frame = 0
-    while window_start_time < (end_time - pd.Timedelta(minutes=window_size)):
-        print(window_start_time)
+    number_of_frames = int(
+        (end_time - start_time - pd.Timedelta(minutes=window_size))
+                / pd.Timedelta(minutes=sliding_interval)
+    )
+
+    for frame in tqdm(range(number_of_frames)):
+        window_start_time = start_time + pd.Timedelta(minutes=sliding_interval) * frame
         window_end_time = window_start_time + pd.Timedelta(minutes=window_size)
 
         signal_window_df = signal_df[
@@ -43,9 +47,6 @@ def create_adjacency_matrices(signal_df, sliding_interval=30, window_size=60):
         adjacency_matrices.append(create_adjacency_matrix(signal_matrix, store_dict))
         count_of_shoppers.append(count_shoppers_in_store(signal_matrix, store_dict))
         frame_times[frame] = window_start_time
-
-        window_start_time = window_start_time + pd.Timedelta(minutes=sliding_interval)
-        frame += 1
 
     return np.array(adjacency_matrices), np.array(count_of_shoppers), store_dict, frame_times
 
@@ -88,7 +89,9 @@ def count_shoppers_in_store(signal_matrix, store_dict):
     """
     store_dict_count = copy.deepcopy(store_dict)
     for store in store_dict_count:
-        store_dict_count[store]['count'] = len(np.where(signal_matrix[:, 1] == store)[0])
+        store_dict_count[store]['frequency'] = len(
+            np.unique(signal_matrix[np.where(signal_matrix[:, 1] == store)])
+        )
 
     return store_dict_count
 
@@ -105,3 +108,16 @@ def calculate_average_store_position(signal_df, store_dict):
         store_dict_position[store]['y'] = signal_df[signal_df.store_id == store]['y'].mean()
 
     return store_dict_position
+
+
+def calculate_total_count_of_shoppers(signal_df):
+    signal_df = signal_df[
+        (signal_df.date_time.dt.time > pd.Timestamp('7:00:00').time())
+    ]
+
+    store_ids = np.sort(signal_df[signal_df.store_id.notnull()].store_id.unique())
+    store_dict = {key: {'index': value} for (key, value) in zip(store_ids, range(len(store_ids)))}
+    store_dict = calculate_average_store_position(signal_df, store_dict)
+    signal_matrix = signal_df.as_matrix(['mac_address', 'store_id'])
+
+    return count_shoppers_in_store(signal_matrix, store_dict)
