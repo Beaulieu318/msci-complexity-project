@@ -14,8 +14,7 @@ def create_adjacency_matrices(signal_df, sliding_interval=30, window_size=60):
     :return: (np.array) an array of adjacency matrices which increase in time with intervals of `sliding_interval`
     """
     signal_df = signal_df[
-        (signal_df.date_time.dt.time > pd.Timestamp('7:00:00').time()) &
-        (signal_df.date_time.dt.time < pd.Timestamp('12:00:00').time())
+        (signal_df.date_time.dt.time > pd.Timestamp('7:00:00').time())
     ]
 
     store_ids = np.sort(signal_df[signal_df.store_id.notnull()].store_id.unique())
