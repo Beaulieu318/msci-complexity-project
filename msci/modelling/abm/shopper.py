@@ -20,7 +20,8 @@ class Shopper:
         The method called to make the shopper perform an action.
         :param environment: (Object) contains the environment of the shop.
         """
-        self.move(environment)
+        for i in range(200):
+            self.move(environment)
         # self.look()
         # self.buy()
 
