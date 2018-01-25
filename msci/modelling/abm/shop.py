@@ -1,6 +1,7 @@
 class Shop:
     def __init__(self, name, corners):
         self.name = name
+        self.corners = corners
         self.walls = self._make_walls(corners)
 
     def __str__(self):
