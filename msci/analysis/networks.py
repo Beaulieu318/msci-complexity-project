@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from tqdm import tqdm_notebook as tqdm
 
 
 def create_adjacency_matrices(signal_df, sliding_interval=30, window_size=60):
@@ -124,3 +124,26 @@ def calculate_total_count_of_shoppers(signal_df):
     signal_matrix = signal_df.as_matrix(['mac_address', 'store_id'])
 
     return count_shoppers_in_store(signal_matrix, store_dict)
+
+
+def calculate_in_degree_rank(total_shopper_count_df):
+    """
+    Calculates the rank in the frequency table for the degrees (number of people going to a shop)
+
+    :param total_shopper_count_df: (pd.Dataframe) contains the stores with the frequency (count of vistors for each shop)
+    :return: (list, list) the degrees and the rank which can be plotted on the x and y axis respecitively
+    """
+    total_shopper_count_df = total_shopper_count_df.sort_values('frequency')
+    total_shopper_count_group = total_shopper_count_df.groupby('frequency')
+    N = len(total_shopper_count_group)
+    P = lambda k: total_shopper_count_group.count()['index'][k] / total_shopper_count_group.count()['index'].sum()
+    degrees = total_shopper_count_group.count().index
+
+    rank = []
+    for i in range(len(degrees)):
+        r_i = 0
+        for k in degrees[i:]:
+            r_i += P(k)
+        r_i *= N
+        rank.append(r_i)
+    return degrees, rank
