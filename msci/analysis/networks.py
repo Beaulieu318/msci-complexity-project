@@ -139,11 +139,20 @@ def calculate_in_degree_rank(total_shopper_count_df):
     P = lambda k: total_shopper_count_group.count()['index'][k] / total_shopper_count_group.count()['index'].sum()
     degrees = total_shopper_count_group.count().index
 
-    rank = []
-    for i in range(len(degrees)):
-        r_i = 0
-        for k in degrees[i:]:
-            r_i += P(k)
-        r_i *= N
-        rank.append(r_i)
+    # There are two ways of doing this
+
+    # Using probability
+    # rank = []
+    # for i in range(len(degrees)):
+    #     r_i = 0
+    #     for k in degrees[i:]:
+    #         r_i += P(k)
+    #     r_i *= N
+    #     rank.append(r_i)
+
+    # Using the actual position in the frequency table
+    rank = range(len(total_shopper_count_df))[::-1]
+    degrees = total_shopper_count_df['frequency']
+    # shop = total_shopper_count_df['store_id']
+
     return degrees, rank
