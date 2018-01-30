@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from msci.utils import utils
 from msci.utils import log_bin
+import time
+from scipy.spatial.distance import directed_hausdorff
+from itertools import product
+from scipy import stats
 
 
 def path_length(signal_df):
@@ -80,20 +84,23 @@ def whole_path_dist(signal_df):
 def plot_dist(distribution, metric='Distance'):
     malls = list(distribution.keys())
     fig = plt.figure()
+    log_points = []
     for mall in malls:
-        lb_centers, lb_counts = bin(distribution[mall])
+        #lb_centers, lb_counts = bin(distribution[mall])
         hist, bins = np.histogram(distribution[mall], bins=2000, normed=True)
         center = (bins[:-1] + bins[1:]) / 2
-        log_center = np.log(center)
-        log_hist = np.log(hist)
-        log_lbx = np.log(lb_centers)
-        log_lby = np.log(lb_counts)
+        log_center = np.log10(center)
+        log_hist = np.log10(hist)
+        #log_lbx = np.log10(lb_centers)
+        #log_lby = np.log10(lb_counts)
         plt.scatter(log_center, log_hist, s=0.5, label=mall + ' raw')
-        plt.plot(log_lbx, log_lby, label=mall + ' log bin')
+        #plt.plot(log_lbx, log_lby, label=mall + ' log bin')
+        #log_points.append([log_lbx, log_lby])
     plt.xlabel(metric + ' (log)')
     plt.ylabel('PDF (log)')
     plt.legend()
     fig.show()
+    return log_points
 
 
 def all_mall_dists(func):
@@ -106,5 +113,160 @@ def all_mall_dists(func):
     return dists
 
 
+def discrete_difference(x, y):
+    y_diff = np.array([y[i+1] - y[i] for i in range(len(y) -1)])
+    x_diff = np.array([x[i+1] - x[i] for i in range(len(x) -1)])
+    diff = y_diff/x_diff
+    return diff
+
+
 def bin(data, bin_start=1., first_bin_width=1.4, a=1.6, drop_zeros=True):
     return log_bin.log_bin(data, bin_start, first_bin_width, a, drop_zeros=drop_zeros)
+
+
+def shop_areas(signal_df, store_only=True):
+    signal_df = signal_df.dropna()
+    store_ids = signal_df.store_id.drop_duplicates().tolist()
+    if store_only:
+        store_ids = [i for i in store_ids if i[0] == 'B']
+    areas = {}
+    dimensions = {}
+    store_id_df = signal_df.groupby('store_id')
+    store_data = [store_id_df.get_group(i) for i in store_ids]
+    for store in range(len(store_data)):
+        print(store)
+        x = store_data[store].x.tolist()
+        y = store_data[store].y.tolist()
+        pos = list(zip(x, y))
+        key = list(set(x))
+        xy_dict = {k: [] for k in key}
+        for (i, j) in pos:
+            xy_dict[i].append(j)
+        area = []
+        dims = {}
+        for k in key:
+            y_max = np.amax(xy_dict[k])
+            y_min = np.amin(xy_dict[k])
+            area.append(y_max - y_min)
+            dims[k] = [y_min, y_max]
+        dimensions[store_ids[store]] = dims
+        areas[store_ids[store]] = np.sum(area)
+    return store_data, areas, dimensions
+
+
+def plot_shop_area(dimensions, store_id):
+    dim_dict = dimensions[store_id]
+    x = list(dim_dict.keys())
+    y_max = [dim_dict[i][1] for i in x]
+    y_min = [dim_dict[i][0] for i in x]
+    fig = plt.figure()
+    plt.scatter(x, y_min, color='r')
+    plt.scatter(x, y_max, color='b')
+    for i in range(len(x)):
+        plt.plot([x[i], x[i]], [y_min[i], y_max[i]], color='g')
+    plt.style.use('seaborn')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    fig.show()
+    return x + x, y_max + y_min
+
+
+def visitors_area(signal_df, store_only=True):
+    if store_only:
+        store_id_df, areas = shop_areas(signal_df)[:2]
+    else:
+        store_id_df, areas = shop_areas(signal_df, store_only=False)[:2]
+    areas = [areas[a] for a in list(areas)]
+    visitor_numbers = [len(i.mac_address.tolist()) for i in store_id_df]
+    log_vis = np.log10(visitor_numbers)
+    log_ar = np.log10(areas)
+    fig = plt.figure()
+    plt.scatter(log_ar, log_vis, color='C1')
+    plt.xlabel(r'Shop Area, $m^2$ (log)', fontsize=35)
+    plt.ylabel('Number of Visitors (log)', fontsize=35)
+    slope, intercept, r_value, p_value, std_err = stats.linregress(log_ar, log_vis)
+    x = np.linspace(0, 4, 5)
+    y = [slope*i + intercept for i in x]
+    plt.plot(x, y, color='C0', linestyle='dashed', label=r'$\tau=$' + str(round(slope, 3)))
+    print(slope, intercept)
+    #plt.legend()
+    plt.xlim((0,4))
+    plt.style.use('ggplot')
+    fig.show(),
+    return areas, visitor_numbers
+
+
+def fraction_visited(signal_df):
+    macs = signal_df.mac_address.drop_duplicates().tolist()
+    stores = signal_df.store_id.drop_duplicates().tolist()
+    grouped_df = signal_df.groupby('mac_address')
+    groups = [grouped_df.get_group(i) for i in macs]
+    stores_visited = []
+    for group in groups:
+        stores_v = group.store_id.tolist()
+        stores_visited.append(len(list(set(stores_v)))/len(stores))
+    return stores_visited
+
+
+def haussdorf_distance(path_a, path_b, manual=False):
+    """
+    computes Haussdorf distance between two paths a and b.
+    Note: h(a,b) not necessarily equal to h(b, a)
+    :param path_a: (list of tuples) x,y coordinates of path a
+    :param path_b: (list of tuples) x,y coordinates of path b
+    :param manual: (Boolean) standard python library or own code
+    :return: Haussdorf distance H(a,b)
+    """
+    if manual:
+        h = 0
+        for a in path_a:
+            ab_distances = [utils.euclidean_distance(a, b) for b in path_b]
+            min_ab = np.amin(ab_distances)
+            if min_ab > h:
+                h = min_ab
+    else:
+        h = directed_hausdorff(np.array(path_a), np.array(path_b))[0]
+    return h
+
+
+def undirected_haussdorf(path_a, path_b, manual=False):
+    hab = haussdorf_distance(path_a, path_b, manual=manual)
+    hba = haussdorf_distance(path_b, path_a, manual=manual)
+    return np.amax([hab, hba])
+
+
+def position_dictionary(signal_df):
+    macs = signal_df.mac_address.drop_duplicates().tolist()
+    grouped_df = signal_df.groupby('mac_address')
+    groups = [grouped_df.get_group(i) for i in macs]
+    positions = {macs[i]: list(zip(groups[i].x.tolist(), groups[i].y.tolist())) for i in range(len(groups))}
+    return positions
+
+
+# def pairwise_haussdorf(positions, macs):
+#     ph = {}
+#     i = 0
+#     for mac1 in macs:
+#         i += 1
+#         j = 0
+#         print('mac', i)
+#         for mac2 in macs[i+1:]:
+#             j += 1
+#             print(j)
+#             if mac1 != mac2:
+#                 ph[(mac1, mac2)] = undirected_haussdorf(positions[mac1], positions[mac2])
+#                 ph[(mac1, mac2)] = undirected_haussdorf(positions[mac1], positions[mac2])
+#     return ph
+
+
+def pairwise_haussdorf(positions, macs):
+    ph = np.zeros((len(macs), len(macs)))
+    pairwise_combinations = list(product(range(len(macs)), range(len(macs))))
+    for (i, j) in pairwise_combinations:
+        t0 = time.time()
+        if j > i:
+            #print(j)
+            hd = undirected_haussdorf(positions[macs[i]], positions[macs[j]])
+            ph[i][j] = hd
+        print(time.time() - t0)
+    return ph
