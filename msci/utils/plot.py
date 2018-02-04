@@ -96,22 +96,23 @@ def plot_path_jn(signal_df, mac_address_df, axes, scatter=True):
     axes.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1))
 
 
-def plot_points_on_map(x, y, label=False):
+def plot_points_on_map(x, y, c='r', label=False):
     """
     Plots list of x,y coordinates onto a map
 
     :param x: (list) A list of x coordinates
     :param y: (list) A list of y coordinates
+    :param c: (str) color of plot
     :param label: (Boolean) Where the coordinates should be labelled with numbers
     :return: A plot
     """
-    fig = plt.figure()
+    #fig = plt.figure()
 
     img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
     plt.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
     for i in range(len(x)):
-        plt.scatter(x[i], y[i])
+        plt.scatter(x[i], y[i], color=c)
         if label:
             for j in range(len(x[i])):
                 plt.annotate(str(i), (x[i][j], y[i][j]))
@@ -121,7 +122,7 @@ def plot_points_on_map(x, y, label=False):
     plt.ylabel('y (m)')
     plt.xlim((0, 350))
     plt.ylim((0, 200))
-    fig.show()
+    #fig.show()
 
 
 """

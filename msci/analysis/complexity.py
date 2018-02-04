@@ -8,6 +8,9 @@ import time
 from scipy.spatial.distance import directed_hausdorff
 from itertools import product
 from scipy import stats
+from sklearn.cluster import KMeans
+from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
 
 
 def path_length(signal_df):
@@ -154,6 +157,35 @@ def shop_areas(signal_df, store_only=True):
     return store_data, areas, dimensions
 
 
+def efficient_area(signal_df, store_only=True):
+    stores = signal_df.store_id.drop_duplicates().tolist()
+    if store_only:
+        stores = [i for i in stores if i[0] == 'B']
+    grouped = signal_df.groupby('store_id')
+    groups = [grouped.get_group(i) for i in stores]
+    areas = {}
+    plot_points = {}
+    for g in range(len(groups)):
+        area = 0
+        ym = {}
+        x = np.round(groups[g].x.tolist()).astype('int')
+        y = np.round(groups[g].y.tolist())
+        bins = np.nonzero(np.bincount(x))[0]
+        for i in bins:
+            ysub = np.array(y)[np.where(x == i)[0]]
+            ymax = np.amax(ysub)
+            ymin = np.amin(ysub)
+            ym[i] = [ymin, ymax]
+            l = ymax-ymin
+            if l != 0:
+                area += ymax-ymin
+            else:
+                area += 1
+        areas[stores[g]] = area
+        plot_points[stores[g]] = ym
+    return groups, areas, plot_points
+
+
 def plot_shop_area(dimensions, store_id):
     dim_dict = dimensions[store_id]
     x = list(dim_dict.keys())
@@ -173,9 +205,9 @@ def plot_shop_area(dimensions, store_id):
 
 def visitors_area(signal_df, store_only=True):
     if store_only:
-        store_id_df, areas = shop_areas(signal_df)[:2]
+        store_id_df, areas = efficient_area(signal_df)[:2]
     else:
-        store_id_df, areas = shop_areas(signal_df, store_only=False)[:2]
+        store_id_df, areas = efficient_area(signal_df, store_only=False)[:2]
     areas = [areas[a] for a in list(areas)]
     visitor_numbers = [len(i.mac_address.tolist()) for i in store_id_df]
     log_vis = np.log10(visitor_numbers)
@@ -188,11 +220,11 @@ def visitors_area(signal_df, store_only=True):
     x = np.linspace(0, 4, 5)
     y = [slope*i + intercept for i in x]
     plt.plot(x, y, color='C0', linestyle='dashed', label=r'$\tau=$' + str(round(slope, 3)))
-    print(slope, intercept)
+    print(slope, intercept, r_value**2)
     #plt.legend()
-    plt.xlim((0,4))
+    plt.xlim((0, 4))
     plt.style.use('ggplot')
-    fig.show(),
+    fig.show()
     return areas, visitor_numbers
 
 
@@ -208,7 +240,7 @@ def fraction_visited(signal_df):
     return stores_visited
 
 
-def haussdorf_distance(path_a, path_b, manual=False):
+def haussdorf_distance_manual(path_a, path_b):
     """
     computes Haussdorf distance between two paths a and b.
     Note: h(a,b) not necessarily equal to h(b, a)
@@ -229,18 +261,58 @@ def haussdorf_distance(path_a, path_b, manual=False):
     return h
 
 
+def haussdorf_distance(path_a, paths):
+    """
+    computes Haussdorf distance between path a and other paths, b.
+    Note: h(a,b) not necessarily equal to h(b, a)
+    :param path_a: (list of tuples) x,y coordinates of path a
+    :param paths: (list of list of tuples) x,y coordinates of b paths
+    :return: Haussdorf distance H(a,b)
+    """
+    hab = [directed_hausdorff(np.array(path_a), np.array(p))[0] for p in paths]
+    hba = [directed_hausdorff(np.array(p), np.array(path_a))[0] for p in paths]
+    greater = int(hab > hba)
+    less = int(hba > hab)
+    h = hab*greater + hba*less
+    return h
+
+
+def pairwise_haussdorf_fast(pos, plot=False):
+    t0 = time.time()
+    H = []
+    for i in range(len(pos)):
+        print(i)
+        H.append(haussdorf_distance(pos[i], pos))
+    print(time.time() - t0)
+    H = np.array(H).reshape(len(pos), len(pos))
+    if plot:
+        plot_heat(H)
+    return H
+
+
+def plot_heat(H):
+    fig = plt.figure()
+    plt.imshow(H)
+    plt.colorbar()
+    fig.show()
+
+
 def undirected_haussdorf(path_a, path_b, manual=False):
     hab = haussdorf_distance(path_a, path_b, manual=manual)
     hba = haussdorf_distance(path_b, path_a, manual=manual)
     return np.amax([hab, hba])
 
 
-def position_dictionary(signal_df):
+def position_dictionary(signal_df, list_type=True):
     macs = signal_df.mac_address.drop_duplicates().tolist()
     grouped_df = signal_df.groupby('mac_address')
     groups = [grouped_df.get_group(i) for i in macs]
-    positions = {macs[i]: list(zip(groups[i].x.tolist(), groups[i].y.tolist())) for i in range(len(groups))}
-    return positions
+    if list_type:
+        positions = [list(zip(groups[i].x.tolist(), groups[i].y.tolist())) for i in range(len(groups))]
+        return positions
+    else:
+        positions = {macs[i]: list(zip(groups[i].x.tolist(), groups[i].y.tolist())) for i in range(len(groups))}
+        return positions
 
 
 # def pairwise_haussdorf(positions, macs):
@@ -270,3 +342,105 @@ def pairwise_haussdorf(positions, macs):
             ph[i][j] = hd
         print(time.time() - t0)
     return ph
+
+
+def store_dictionary(mm_df, store_only=False):
+    stores = mm_df.store_id.drop_duplicates().tolist()
+    if store_only:
+        stores = [i for i in stores if i[0] == 'B']
+    grouped = mm_df.groupby('store_id')
+    groups = [grouped.get_group(i) for i in stores]
+    xs = [group.x.tolist() for group in groups]
+    ys = [group.y.tolist() for group in groups]
+    pos = {stores[i]: list(zip(xs[i], ys[i])) for i in range(len(stores))}
+    return groups, pos
+
+
+def location_outliers(store_pos, method='density', plot=True):
+    """
+    NOTE: Must hash plt.figure() lines in pfun.plot_points_on_map
+    :param store_pos:
+    :param plot:
+    :return:
+    """
+    if method is 'density':
+        db = DBSCAN(eps=0.3, min_samples=10).fit_predict(store_pos)
+        return db
+        core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+        core_samples_mask[db.core_sample_indices_] = True
+        labels = db.labels_
+        n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+        unique_labels = set(labels)
+        colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(unique_labels))]
+        for k, col in zip(unique_labels, colors):
+            if k == -1:
+                col = [0, 0, 0, 1]
+        class_member_mask = (labels == k)
+
+        xy = store_pos[class_member_mask & core_samples_mask]
+        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                 markeredgecolor='k', markersize=14)
+
+        xy = store_pos[class_member_mask & ~core_samples_mask]
+        plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                 markeredgecolor='k', markersize=6)
+
+    plt.title('Estimated number of clusters: %d' % n_clusters_)
+    plt.show()
+
+    if method is 'km':
+        kmeans = KMeans(n_clusters=2, random_state=0).fit(store_pos)
+        clusters = KMeans(n_clusters=2, random_state=0).fit_predict(store_pos).astype('bool')
+    if plot:
+        fig = plt.figure()
+        x = [store_pos[i][0] for i in range(len(store_pos)) if clusters[i]]
+        y = [store_pos[i][1] for i in range(len(store_pos)) if clusters[i]]
+        x_out = [store_pos[i][0] for i in range(len(store_pos)) if clusters[i] == False]
+        y_out = [store_pos[i][1] for i in range(len(store_pos)) if clusters[i] == False]
+        pfun.plot_points_on_map(x, y)
+        pfun.plot_points_on_map(x_out, y_out, c='b')
+        fig.show()
+    return kmeans, clusters
+
+
+def kth_nearest_neighbours(positions, k=5, tolerance=1, plot=True):
+    """
+    NOTE: Must hash plt.figure() lines in pfun.plot_points_on_map
+    :param positions: (list) list of x,y coordinates for store signals
+    :param k:
+    :param plot:
+    :param tolerance:
+    :return:
+    """
+    nbrs = NearestNeighbors(n_neighbors=k, algorithm='ball_tree').fit(positions)
+    distances, indices = nbrs.kneighbors(positions)
+    distances = np.array([d[k-1] for d in distances])
+    #return distances
+    in_store_indices = np.where(distances <= tolerance)[0]
+    out_store_indices = np.where(distances > tolerance)[0]
+    in_store = np.array(positions)[in_store_indices]
+    out_store = np.array(positions)[out_store_indices]
+    if plot:
+        fig = plt.figure()
+        pfun.plot_points_on_map([i[0] for i in in_store], [i[1] for i in in_store])
+        pfun.plot_points_on_map([i[0] for i in out_store], [i[1] for i in out_store], c='b')
+        fig.show()
+    return in_store_indices
+
+
+def clean_store_id(mm_df, store_only=False):
+    stores = mm_df.store_id.drop_duplicates().tolist()
+    if store_only:
+        stores = [i for i in stores if i[0] == 'B']
+        sd = store_dictionary(mm_df, store_only=True)
+    else:
+        sd = store_dictionary(mm_df)
+    groups = sd[0]
+    clean_groups = []
+    for i in range(len(stores)):
+        print(i)
+        in_store = kth_nearest_neighbours(sd[1][stores[i]], plot=False)
+        clean_group = groups[i].iloc[in_store]
+        clean_groups.append(clean_group)
+    return pd.concat(clean_groups)
+
