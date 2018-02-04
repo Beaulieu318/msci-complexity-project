@@ -297,6 +297,13 @@ def plot_heat(H):
     fig.show()
 
 
+def matrix_correlation(matrix_a, matrix_b):
+    a_flat = matrix_a.flatten()
+    b_flat = matrix_b.flatten()
+    corr = np.corrcoef(a_flat, b_flat)
+    return corr
+
+
 def undirected_haussdorf(path_a, path_b, manual=False):
     hab = haussdorf_distance(path_a, path_b, manual=manual)
     hba = haussdorf_distance(path_b, path_a, manual=manual)
