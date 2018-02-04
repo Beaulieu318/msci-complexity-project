@@ -277,7 +277,7 @@ def haussdorf_distance(path_a, paths):
     return h
 
 
-def pairwise_haussdorf_fast(pos, plot=False):
+def pairwise_haussdorf_fast(pos, plot=False, normal=True):
     t0 = time.time()
     H = []
     for i in range(len(pos)):
@@ -285,6 +285,8 @@ def pairwise_haussdorf_fast(pos, plot=False):
         H.append(haussdorf_distance(pos[i], pos))
     print(time.time() - t0)
     H = np.array(H).reshape(len(pos), len(pos))
+    if normal:
+        H = H/np.amax(H)
     if plot:
         plot_heat(H)
     return H
