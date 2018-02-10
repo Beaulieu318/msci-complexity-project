@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import *
 from sklearn.cluster import *
 import networkx as nx
-import community
+import community as comm
 import itertools
 import scipy as sp
+from msci.cleaning.store_ids import *
 
 
 def generate_girv_newman_matrix(clean_df, i1, i2):
@@ -140,6 +141,27 @@ def graph_modularity(G):
             modularity += G[i][j] - np.sum(G[i])*np.sum(G[j])/(2*m)
 
 
+def adjacency(so=True, excel=False, graph=False):
+    mm_df = utils.import_signals(signal_type=1)
+    mm_df = mm_df[mm_df.store_id.notnull()]
+    clean_df = clean_store_id(mm_df, store_only=so)
+    pivot = create_shopper_shop_pivot(clean_df)
+    common = pivot_to_common(pivot)
+    if excel:
+        #np.savetxt('adjacency.csv', common, delimiter=",")
+        df = pd.DataFrame(common)
+        df.to_csv('adjacency.csv', index=False, header=False)
+    if graph:
+        G = nx.from_numpy_matrix(common)
+        return G
+    return common
+
+
+def louvain_mod(G):
+    lm = comm.best_partition(G)
+    return 
+
+
 lm_iterations = []
 
 
@@ -198,6 +220,17 @@ def louvain_modularity_(G):
         for i in range(number_of_nodes):
             delta_q = []
             neighbours = np.nonzero(G[i])[0]
+
+            i_community_members = communities[inverse_communities[i]]
+            nu_to_c1 = np.sum([G[i, i_community_members]])
+            c1_to_nu = np.sum([G[i_community_members, i]])
+
+            out_i = np.sum(G[i])
+            in_i = np.sum(G_t[i])
+
+            c_veci = np.sum([G[i_community_members]])
+            c_inv_veci = np.sum([G_t[i_community_members]])
+
             # print('neighbours', neighbours)
             if len(neighbours) > 0:
                 for j in neighbours:
@@ -205,35 +238,24 @@ def louvain_modularity_(G):
                     # print(j)
 
                     j_community_members = communities[inverse_communities[j]]
-                    i_community_members = communities[inverse_communities[i]]
 
                     # print(i_community_members)
                     # print(j_community_members)
 
-                    nu_to_c2 = np.sum([G[i][n] for n in j_community_members])
-                    nu_to_c1 = np.sum(G[i][n] for n in i_community_members)
-                    c2_to_nu = np.sum([G[n][i] for n in j_community_members])
-                    c1_to_nu = np.sum([G[n][i] for n in i_community_members])
+                    nu_to_c2 = np.sum([G[i, j_community_members]])
+                    c2_to_nu = np.sum([G[j_community_members, i]])
+
 
                     # print('nu to c1', nu_to_c1)
                     # print('nu to c2', nu_to_c2)
                     # print('c1 to nu', c1_to_nu)
                     # print('c2 to nu', c2_to_nu)
 
-                    out_i = np.sum(G[i])
-                    in_i = np.sum(G_t[i])
-
                     # print('out', out_i)
                     # print('in', in_i)
 
-                    c_veci = np.sum([G[i_c] for i_c in i_community_members])
-                    c_vecj = np.sum([G[j_c] for j_c in j_community_members])
-
-                    # print('cveci', c_veci)
-                    # print('cvecj', c_vecj)
-
-                    c_inv_veci = np.sum([G_t[i_c] for i_c in i_community_members])
-                    c_inv_vecj = np.sum([G_t[j_c] for j_c in j_community_members])
+                    c_vecj = np.sum([G[j_community_members]])
+                    c_inv_vecj = np.sum([G_t[j_community_members]])
 
                     # print('invcveci', c_inv_veci)
                     # print('invcvecj', c_inv_vecj)
@@ -260,3 +282,84 @@ def louvain_modularity_(G):
         if set(changes[-3:]) == set(changes[-6:-3]):
             local_maximum = False
     return communities, inverse_communities, changes[-1]
+
+
+def louvain_modularity_inv(G):
+    G_t = G.transpose()
+    m = np.sum(G)
+    print(m)
+    number_of_nodes = np.shape(G)[0]
+    inverse_communities = np.arange(number_of_nodes)
+    local_maximum = True
+    changes = [0, 1, 0, 1, 0]
+    while local_maximum:
+        t0 = time.time()
+        change = 0
+        for i in range(number_of_nodes):
+            delta_q = []
+            neighbours = np.nonzero(G[i])[0]
+
+            current_community = inverse_communities[i]
+            i_community_members = np.where(inverse_communities == current_community)
+            nu_to_c1 = np.sum([G[i, i_community_members]])
+            c1_to_nu = np.sum([G[i_community_members, i]])
+
+            out_i = np.sum(G[i])
+            in_i = np.sum(G_t[i])
+
+            c_veci = np.sum([G[i_community_members]])
+            c_inv_veci = np.sum([G_t[i_community_members]])
+
+            # print('neighbours', neighbours)
+            if len(neighbours) > 0:
+                for j in neighbours:
+
+                    # print(j)
+
+                    j_current_community = inverse_communities[j]
+                    j_community_members = np.where(inverse_communities == j_current_community)
+
+                    # print(i_community_members)
+                    # print(j_community_members)
+
+                    nu_to_c2 = np.sum([G[i, j_community_members]])
+                    c2_to_nu = np.sum([G[j_community_members, i]])
+
+
+                    # print('nu to c1', nu_to_c1)
+                    # print('nu to c2', nu_to_c2)
+                    # print('c1 to nu', c1_to_nu)
+                    # print('c2 to nu', c2_to_nu)
+
+                    # print('out', out_i)
+                    # print('in', in_i)
+
+                    c_vecj = np.sum([G[j_community_members]])
+                    c_inv_vecj = np.sum([G_t[j_community_members]])
+
+                    # print('invcveci', c_inv_veci)
+                    # print('invcvecj', c_inv_vecj)
+
+                    dq = (nu_to_c2 - nu_to_c1 + c2_to_nu - c1_to_nu + (out_i*(c_veci - c_vecj) + in_i*(c_inv_veci - c_inv_vecj))/m)/m
+                    #print('dq', dq)
+                    delta_q.append(dq)
+
+                return delta_q
+                dq_max = np.amax(delta_q)
+                if dq_max > 0:
+                    max_positions = [i for i, j in enumerate(delta_q) if j == dq_max]
+                    new_community = inverse_communities[neighbours[max_positions[-1]]]
+                    if new_community != inverse_communities[i]:
+                        change += 1
+                        #communities[new_community].append(communities[inverse_communities[i]].pop(communities[inverse_communities[i]].index(i)))
+                    #if not communities[inverse_communities[i]]:
+                        #del communities[inverse_communities[i]]
+                        inverse_communities[i] = new_community
+        return inverse_communities
+        print('COMMUNITY CHANGES', change)
+        print('Cycle Time', time.time() - t0)
+        changes.append(change)
+        print('change test', change, set(changes[-5:]), changes[-1])
+        if set(changes[-3:]) == set(changes[-6:-3]):
+            local_maximum = False
+    return inverse_communities, changes[-1]
