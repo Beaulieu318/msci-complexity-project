@@ -9,6 +9,7 @@ import matplotlib.cm as cm
 from tempfile import mkstemp, mkdtemp
 from imageio import imread, mimsave
 from matplotlib.pyplot import clf
+from scipy.stats import gaussian_kde
 
 from msci.utils.animation import RealShoppersAnimation
 
@@ -59,14 +60,14 @@ def plot_path(signal_df, mac_address_df, scatter=True):
     fig.show()
 
 
-def plot_path_jn(signal_df, mac_address_df, axes, scatter=True):
+def plot_path_jn(signal_df, mac_address_df, axes, plot_type='path', label=True):
     """
     Plots paths of list of mac addresses through shopping mall
 
     :param signal_df: data frame
     :param mac_address_df: list of mac addresses
     :param axes: the ax from the figure
-    :param scatter: boolean to allow for scatter or plot
+    :param plot_type: scatter, density
     :return: None
     """
     if type(mac_address_df) == pd.core.frame.DataFrame:
@@ -83,17 +84,22 @@ def plot_path_jn(signal_df, mac_address_df, axes, scatter=True):
     axes.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
     for title, group in signal_group:
-        if scatter:
-            plt.scatter(group.x, group.y, label=title, s=2)
+        if plot_type == 'scatter':
+            axes.scatter(group.x, group.y, label=title, s=2)
+        elif plot_type == 'density':
+            xy = np.vstack([group.x.tolist(), group.y.tolist()])
+            z = gaussian_kde(xy)(xy)
+            axes.scatter(group.x, group.y, c=z, s=10, edgecolor='', label=title)
         else:
-            plt.plot(group.x, group.y, label=title)
+            axes.plot(group.x, group.y, label=title)
 
     axes.set_title('Stores in Mall of Mauritius')
     axes.set_xlabel('x (m)')
     axes.set_ylabel('y (m)')
     axes.set_xlim((0, 350))
     axes.set_ylim((0, 200))
-    axes.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1))
+    if label:
+        axes.legend(loc='upper center', markerscale=5., ncol=3, bbox_to_anchor=(0.5, -0.1))
 
 
 def plot_points_on_map(x, y, c='r', label=False):
@@ -147,7 +153,6 @@ def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
         signal_time_df.rename(columns={'mac_address': label}, inplace=True)
 
     ax = signal_time_df.plot(ax=axes)
-    ax.set_title('Histogram of mac addresses against time')
     ax.set_xlabel('Time (hh:mm)')
     ax.set_ylabel('Count of mac addresses per {} mins (no.)'.format(minute_resolution))
 

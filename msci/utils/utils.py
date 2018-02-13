@@ -89,6 +89,20 @@ def import_mac_addresses(mall='Mall of Mauritius', signal_type=None):
     return mac_address_df
 
 
+def import_shop_directory(mall='Mall of Mauritius'):
+    malls = {
+        'Mall of Mauritius': 'mauritius',
+        'Phoenix Mall': 'phoenix',
+        'Home & Leisure': 'home_and_leisure',
+    }
+
+    directory_df = pd.read_csv(
+        dir_path + '/../data/{}_directory.csv'.format(malls[mall]),
+    )
+
+    return directory_df
+
+
 def df_to_csv(df, name, sort=False):
     if sort:
         time_sort = df.sort_values('date_time')

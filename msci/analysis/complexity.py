@@ -308,7 +308,8 @@ def undirected_haussdorf(path_a, path_b, manual=False):
 
 
 def position_dictionary(signal_df, list_type=True):
-    macs = signal_df.mac_address.drop_duplicates().tolist()
+    signal_df = signal_df.sort_values('date_time')
+    macs = signal_df.sort_values('mac_address').mac_address.drop_duplicates().tolist()
     grouped_df = signal_df.groupby('mac_address')
     groups = [grouped_df.get_group(i) for i in macs]
     if list_type:
