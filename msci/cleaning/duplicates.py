@@ -1,43 +1,17 @@
+import time
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import msci.utils.plot as pfun
-from msci.utils import utils
-import time
-import os
+
 from collections import defaultdict
+from tqdm import tqdm_notebook as tqdm
+
+from msci.utils import utils
+import msci.utils.plot as pfun
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
-mac_address_df = pd.read_csv(dir_path + '/../data/mac_address_features.csv')
-mac_address_clean_df = mac_address_df.dropna()
-
-manufacturers_df = {
-    'HUAWEI TECHNOLOGIES CO.,LTD': False,
-    'Xiaomi Communications Co Ltd': False,
-    'Samsung Electronics Co.,Ltd': False,
-    'Ruckus Wireless': True,
-    'SAMSUNG ELECTRO-MECHANICS(THAILAND)': False,
-    'HTC Corporation': False,
-    'LG Electronics (Mobile Communications)': False,
-    'Intel Corporate': True,
-    'Hon Hai Precision Ind. Co.,Ltd.': True,
-    'Murata Manufacturing Co., Ltd.': True,
-    'TCT mobile ltd': False,
-    'Apple, Inc.': False,
-    'Motorola (Wuhan) Mobility Technologies Communication Co., Ltd.': False,
-    'Ubiquiti Networks Inc.': True,
-    'Sony Mobile Communications AB': False,
-    'InPro Comm': True,
-    'SAMSUNG ELECTRO MECHANICS CO., LTD.': False,
-    'Microsoft Corporation': False,
-    'Nokia Corporation': False,
-    'Lenovo Mobile Communication Technology Ltd.': False,
-    'BlackBerry RTS': False,
-    'WISOL': False,
-    'Motorola Mobility LLC, a Lenovo Company': False,
-    'Microsoft Mobile Oy': False
-}
 
 
 def period_analysis(signal_df, macs):
@@ -228,11 +202,10 @@ def duplicate_fill(df, largest_separation):
     :return: (pd.DataFrame) the original DataFrame without two location at the same time
     """
     all_macs = df.mac_address.drop_duplicates().tolist()
-    print(len(all_macs))
     grouped = df.groupby('mac_address')
     groups = [grouped.get_group(i) for i in all_macs]
     new_data = []
-    for g in range(len(groups)):
+    for g in tqdm(range(len(groups)), desc='Duplicate Fill'):
         times = groups[g].date_time.tolist()
         d = defaultdict(list)
         for i, item in enumerate(times):
@@ -270,23 +243,7 @@ def duplicate_fill(df, largest_separation):
     merged_df.loc[new_coordinate_mask, 'y'] = merged_df.loc[new_coordinate_mask, 'y_new']
     unique_columns = ['mac_address', 'date_time', 'location', 'x', 'y']
     merged_df.drop_duplicates(subset=unique_columns, inplace=True)
-    merged_df.reset_index(inplace=True)
+    merged_df.reset_index(inplace=True, drop=True)
     del merged_df['x_new']
     del merged_df['y_new']
     return merged_df
-
-
-def all_mall_duplicate_fill(largest_separation=15):
-    """
-    Deduplicate all the mall sequentially using a maximum speration of `largest_separation`.
-    This imports the data using utils.import_signals
-
-    :param largest_separation: (int) The largest error between points that is allowed
-    :return: (pd.DataFrame) A cleaned concatenated signals dataframe containing all the malls
-    """
-    malls = ['Mall of Mauritius', 'Phoenix Mall', 'Home & Leisure']
-    old_dfs = [utils.import_signals(mall, version=1) for mall in malls]
-    new_dfs = []
-    for df in old_dfs:
-        new_dfs.append(duplicate_fill(df, largest_separation))
-    return pd.concat(new_dfs)

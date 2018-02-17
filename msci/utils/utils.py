@@ -18,6 +18,12 @@ def import_signals(mall='Mall of Mauritius', version=3, signal_type=None):
     :param signal_type: (int) 1: shopper, 0: non-shopper, 0.5: not classified (there is a 0.05 confidence level)
     :return: (pd.DataFrame) the signals
     """
+    malls = {
+        'Mall of Mauritius': 'mauritius',
+        'Phoenix Mall': 'phoenix',
+        'Home & Leisure': 'home_and_leisure',
+    }
+
     if version == 1:
         signal_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016.csv', usecols=COLUMNS_TO_IMPORT)
         signal_df.date_time = signal_df.date_time.astype('datetime64[ns]')
@@ -29,12 +35,6 @@ def import_signals(mall='Mall of Mauritius', version=3, signal_type=None):
         signal_df = signal_df[signal_df['location'] == mall]
         signal_df = signal_df.sort_values('date_time')
     elif version == 3:
-        malls = {
-            'Mall of Mauritius': 'mauritius',
-            'Phoenix Mall': 'phoenix',
-            'Home & Leisure': 'home_and_leisure',
-        }
-
         mac_address_df = pd.read_csv(
             dir_path + '/../data/{}_features.csv'.format(malls[mall])
         )
@@ -53,13 +53,20 @@ def import_signals(mall='Mall of Mauritius', version=3, signal_type=None):
             (signal_df.mac_address.isin(mac_address_df.mac_address.tolist()))
         ]
         signal_df = signal_df.sort_values('date_time')
+    elif version == 4:
+        signal_df = pd.read_csv(dir_path + '/../data/bag_mus_12-22-2016v4.csv', usecols=COLUMNS_TO_IMPORT)
+        signal_df.date_time = signal_df.date_time.astype('datetime64[ns]')
+        signal_df = signal_df[
+            (signal_df['location'] == mall)
+        ]
+        signal_df = signal_df.sort_values('date_time')
     else:
         raise Exception('Version of signals is not defined! Please choose 1,2 or 3')
 
     return signal_df
 
 
-def import_mac_addresses(mall='Mall of Mauritius', signal_type=None):
+def import_mac_addresses(mall='Mall of Mauritius', version=1, signal_type=None):
     """
     Imports the mac addresses for the chosen mall with all the mac addresses' features.
     The data can be downloaded from google drive:
@@ -75,16 +82,23 @@ def import_mac_addresses(mall='Mall of Mauritius', signal_type=None):
         'Home & Leisure': 'home_and_leisure',
     }
 
-    mac_address_df = pd.read_csv(
-        dir_path + '/../data/{}_features.csv'.format(malls[mall])
-    )
+    if version == 1:
+        mac_address_df = pd.read_csv(
+            dir_path + '/../data/{}_features.csv'.format(malls[mall])
+        )
 
-    if signal_type == 1:
-        mac_address_df = mac_address_df[mac_address_df.shopper_label == 1]
-    elif signal_type == 0.5:
-        mac_address_df = mac_address_df[mac_address_df.shopper_label == 0.5]
-    elif signal_type == 0:
-        mac_address_df = mac_address_df[mac_address_df.shopper_label == 0]
+        if signal_type == 1:
+            mac_address_df = mac_address_df[mac_address_df.shopper_label == 1]
+        elif signal_type == 0.5:
+            mac_address_df = mac_address_df[mac_address_df.shopper_label == 0.5]
+        elif signal_type == 0:
+            mac_address_df = mac_address_df[mac_address_df.shopper_label == 0]
+    elif version == 2:
+        mac_address_df = pd.read_csv(
+            dir_path + '/../data/{}_featuresv2.csv'.format(malls[mall])
+        )
+    else:
+        raise Exception("There is no version with this number. Please choose either 1 or 2!")
 
     return mac_address_df
 

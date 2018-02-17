@@ -7,7 +7,6 @@ from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
 
 import msci.utils.plot as pfun
-from msci.utils import utils
 
 from tqdm import tqdm_notebook as tqdm
 
@@ -95,6 +94,7 @@ def kth_nearest_neighbours(positions, k=5, tolerance=1, plot=True):
 
 
 def clean_store_id(signal_df, store_only=False):
+    signal_df.store_id[signal_df.store_id.isnull()] = 'H'
     stores = signal_df.store_id.drop_duplicates().tolist()
     if store_only:
         stores = [i for i in stores if i[0] == 'B']
@@ -103,9 +103,15 @@ def clean_store_id(signal_df, store_only=False):
         sd = store_dictionary(signal_df)
     groups = sd[0]
     clean_groups = []
-    for i in tqdm(range(len(stores))):
-        in_store = kth_nearest_neighbours(sd[1][stores[i]], plot=False)
-        clean_group = groups[i].iloc[in_store]
-        clean_groups.append(clean_group)
-    return pd.concat(clean_groups)
+    for i in tqdm(range(len(stores)), 'Store ID'):
+        if stores[i] == 'H':
+            clean_groups.append(groups[i])
+        else:
+            in_store = kth_nearest_neighbours(sd[1][stores[i]], plot=False)
+            clean_group = groups[i].iloc[in_store]
+            clean_groups.append(clean_group)
 
+    clean_signal_df = pd.concat(clean_groups)
+    clean_signal_df.store_id[clean_signal_df.store_id == 'H'] = np.nan
+
+    return clean_signal_df

@@ -1,8 +1,10 @@
 import os
 import pandas as pd
 import numpy as np
+from tqdm import tqdm_notebook as tqdm
 
 from msci.utils import utils
+from msci.cleaning import kstest
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -33,16 +35,15 @@ def calculate_radius_gyration(signal_df, mac_address_df):
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     macs = mac_address_df.mac_address.tolist()
-    centroids = [np.array((np.mean(signal_mac_group.get_group(i).x.tolist()), np.mean(signal_mac_group.get_group(i).y.tolist()))) for i in macs]
+    centroids = []
     gyrations = []
-    for mac in range(len(macs)):
-        r_cm = centroids[mac]
-        x = signal_mac_group.get_group(macs[mac]).x.tolist()
-        y = signal_mac_group.get_group(macs[mac]).y.tolist()
-        r = [np.array(i) for i in list(zip(x, y))]
-        displacements = [i - r_cm for i in r]
-        displacement_sum = [i[0]**2 + i[1]**2 for i in displacements]
-        gyrations.append(np.sqrt(np.mean(displacement_sum)))
+    for mac in tqdm(range(len(macs)), desc='Radius of Gyration'):
+        r = signal_mac_group.get_group(macs[mac])[['x', 'y']].as_matrix()
+        r_cm = np.mean(r, axis=0)
+        displacement = r - r_cm
+        rms = np.sqrt(np.mean(displacement[:, 0]**2 + displacement[:, 1]**2))
+        centroids.append([r_cm[0], r_cm[1]])
+        gyrations.append(rms)
     return centroids, gyrations
 
 
@@ -77,7 +78,7 @@ def calculate_count_density_variance(signal_df, mac_address_df, minute_resolutio
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     macs = mac_address_df.mac_address.tolist()
     cdv = []
-    for mac in macs:
+    for mac in tqdm(macs, desc='Count density Variance'):
         time = signal_mac_group.get_group(mac).date_time.dt.round(str(minute_resolution) + 'min').value_counts()
         count_variance = time.std()
         cdv.append(count_variance)
@@ -129,7 +130,7 @@ def calculate_average_speed(signal_df, mac_address_df):
     signal_sorted_df = signal_df.sort_values('date_time')
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     av_speeds = []
-    for mac in macs:
+    for mac in tqdm(macs, desc='Average Speed'):
         mac_signals_df = signal_mac_group.get_group(mac)
         av_speed = np.nan
         if len(mac_signals_df) > 1:
@@ -161,7 +162,7 @@ def calculate_turning_angle(signal_df, mac_address_df):
     av_turning_angles = []
     total_turning_angles = []
     av_turning_angle_velocities = []
-    for mac in macs:
+    for mac in tqdm(macs, desc='Turning Angle'):
         mac_signals_df = signal_mac_group.get_group(mac)
 
         av_turning_angle = np.nan
@@ -206,7 +207,7 @@ def calculate_path_length(signal_df, mac_address_df):
 
     av_path_lengths = []
     total_path_lengths = []
-    for mac in macs:
+    for mac in tqdm(macs, 'Path length'):
         mac_signals_df = signal_mac_group.get_group(mac)
 
         av_path_length = np.nan
@@ -241,7 +242,7 @@ def calculate_straightness(signal_df, mac_address_df):
     mod = lambda vec: np.sqrt(vec[:, 0] ** 2 + vec[:, 1] ** 2)
 
     av_straightnesses = []
-    for mac in macs:
+    for mac in tqdm(macs, 'Straighness'):
         mac_signals_df = signal_mac_group.get_group(mac)
 
         av_straightness = np.nan
@@ -273,11 +274,12 @@ def add_wifi_type(signal_df, mac_address_df):
     mac_address_df['wifi_type'] = np.nan
 
     wifi_types = ['wifiuser', 'lawifiuser', 'Discovered-AP', 'fatti Bot ', 'unknown']
-    for wifi_type in wifi_types:
+    for wifi_type in tqdm(wifi_types, 'Wifi Type'):
         signal_wifi_type = signal_df[signal_df.wifi_type == wifi_type].mac_address.tolist()
         mac_address_df.loc[
             mac_address_df.wifi_type.isnull() &
-            (mac_address_df.mac_address.isin(signal_wifi_type)), 'wifi_type'] = wifi_type
+            (mac_address_df.mac_address.isin(signal_wifi_type)), 'wifi_type'
+        ] = wifi_type
 
 
 def find_start_end_coordinate(signal_df, mac_address_df):
@@ -293,11 +295,72 @@ def find_start_end_coordinate(signal_df, mac_address_df):
     signal_mac_group = signal_sorted_df.groupby('mac_address')
     start_coordinates = []
     end_coordinates = []
-    for mac in macs:
+    for mac in tqdm(macs, 'Start/End Coordinates'):
         mac_signals_df = signal_mac_group.get_group(mac)
         start_coordinates.append([mac_signals_df.x.iloc[0], mac_signals_df.y.iloc[0]])
         end_coordinates.append([mac_signals_df.x.iloc[-1], mac_signals_df.y.iloc[-1]])
     return start_coordinates, end_coordinates
+
+
+def find_start_end_time(signal_df, mac_address_df):
+    """
+    Finds the first and last time stamp of the mac address
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list list) Two list containing the first and last time that the mac address was seen
+    """
+    macs = mac_address_df.mac_address.tolist()
+    signal_sorted_df = signal_df.sort_values('date_time')
+    signal_mac_group = signal_sorted_df.groupby('mac_address')
+    start_time = []
+    end_time = []
+    for mac in tqdm(macs, 'Start/End time'):
+        mac_signals_df = signal_mac_group.get_group(mac)
+        start_time.append(mac_signals_df.date_time.iloc[0])
+        end_time.append(mac_signals_df.date_time.iloc[-1])
+    return start_time, end_time
+
+
+def number_of_shops_visited(signal_df, mac_address_df):
+    """
+    Finds the number of shops visited
+
+    :param signal_df: (pd.DataFrame) The signals
+    :param mac_address_df: (pd.DataFrame) The mac addresses
+    :return: (list list) list containing a number of shops visited
+    """
+    macs = mac_address_df.mac_address.tolist()
+    signal_sorted_df = signal_df.sort_values('date_time')
+    signal_mac_group = signal_sorted_df.groupby('mac_address')
+    number_of_shops = []
+    for mac in tqdm(macs, 'Number of Shops'):
+        mac_signals_df = signal_mac_group.get_group(mac)
+        shops = mac_signals_df[
+            mac_signals_df.store_id.str[0] == 'B'
+        ].store_id.drop_duplicates().tolist()
+        number_of_shops.append(len(shops))
+    return number_of_shops
+
+
+def calculate_ks_statistic(signal_df, mac_address_df):
+    macs = mac_address_df.mac_address.tolist()
+    signal_mac_group = signal_df.groupby('mac_address')
+    ks_statistics = []
+
+    norm_random_x = np.random.normal(size=1000)
+    norm_random_y = np.random.normal(size=1000)
+
+    for mac in tqdm(macs):
+        mac_signals_df = signal_mac_group.get_group(mac)
+        coordinates = mac_signals_df[['x', 'y']].as_matrix()
+        norm_coordinates = coordinates - np.mean(coordinates, axis=0)
+
+        ks_stat = kstest.ks2d2s(norm_coordinates[:, 0], norm_coordinates[:, 1], norm_random_x, norm_random_y, extra=True)
+
+        ks_statistics.append(ks_stat[1])
+
+    return ks_statistics
 
 
 def create_mac_address_features(signal_df=None, mall='Mall of Mauritius', export_location=None):
@@ -336,6 +399,11 @@ def create_mac_address_features(signal_df=None, mall='Mall of Mauritius', export
         mac_address_df['end_coordinate'] = \
         find_start_end_coordinate(signal_df, mac_address_df)
     add_wifi_type(signal_df, mac_address_df)
+    mac_address_df['start_time'], \
+        mac_address_df['end_time'] = \
+        find_start_end_time(signal_df, mac_address_df)
+    mac_address_df['number_of_shops'] = number_of_shops_visited(signal_df, mac_address_df)
+    # mac_address_df['ks_statistic'] = calculate_ks_statistic(signal_df, mac_address_df)
 
     if export_location:
         mac_address_df.to_csv(export_location, index=False)
