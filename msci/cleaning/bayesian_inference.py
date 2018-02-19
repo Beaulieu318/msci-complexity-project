@@ -39,12 +39,15 @@ def bayes_array(data, prior, likelihood):
     """
     likelihoods_stationary = likelihood[0](data)
     likelihoods_shopper = likelihood[1](data)
+    likelihood_worker = likelihood[2](data)
     posterior_stationary = likelihoods_stationary*prior[0]
     posterior_shopper = likelihoods_shopper*prior[1]
-    sums = np.array([np.sum(i) for i in list(zip(posterior_stationary, posterior_shopper))])
+    posterior_worker = likelihoods_worker*prior[2]
+    sums = np.array([np.sum(i) for i in list(zip(posterior_stationary, posterior_shopper, posterior_worker))])
     normal_stationary_posterior = posterior_stationary / sums
     normal_shopper_posterior = posterior_shopper / sums
-    return np.array([normal_stationary_posterior, normal_shopper_posterior])
+    normal_worker_posterior = posterior_worker / sums
+    return np.array([normal_stationary_posterior, normal_shopper_posterior, normal_worker_posterior])
 
 
 def prior_generator(p_stationary, mac_length):
@@ -80,6 +83,8 @@ def likelihood_function_generator(mac_address_df, feature, dev_type, plot=False)
         values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 1][feature].values.ravel()
     elif dev_type == 'shopper':
         values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 0][feature].values.ravel()
+    elif dev_type == 'worker':
+        values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 0][feature].values.ravel()
     else:
         raise Exception("The dev_type is not a valid entry. Needs to be either 'stationary' or 'shopper'")
     values = values[np.isfinite(values)]
@@ -101,7 +106,8 @@ def likelihood_dictionary(feature_df, feature_list):
     for feature in feature_list:
         feature_likelihoods[feature] = [
             likelihood_function_generator(feature_df, feature, dev_type='stationary'),
-            likelihood_function_generator(feature_df, feature, dev_type='shopper')]
+            likelihood_function_generator(feature_df, feature, dev_type='shopper')
+            likelihood_function_generator(feature_df, feature, dev_type='worker')]
     return feature_likelihoods
 
 
