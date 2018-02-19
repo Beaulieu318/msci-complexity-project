@@ -12,6 +12,7 @@ from msci.cleaning.store_ids import *
 import os
 import pandas as pd
 from matplotlib_venn import venn3, venn3_circles
+import scipy as sp
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -39,18 +40,28 @@ def shops_visited_by_community(signal_df, community_grouped):
 
 
 
-def create_shopper_shop_pivot(signal_df, matrix=True):
+def create_shopper_shop_pivot(signal_df, matrix=True, sparse=False, sub=False):
     clean_signal_df = signal_df[
         signal_df.store_id.notnull() &
         signal_df.store_id.str.contains('B')
         ]
+    if sub:
+        macs = clean_signal_df.mac_address.drop_duplicates().tolist()
+        mac_sub = np.array(macs)[np.random.choice(len(macs), 1000, replace=False)]
+        clean_signal_df = clean_signal_df[clean_signal_df.mac_address.isin(mac_sub)]
+
     shopper_shop_pivot = pd.pivot_table(clean_signal_df, values='x', index='mac_address', columns='store_id',
                                         aggfunc=len)
     shopper_shop_pivot = shopper_shop_pivot.fillna(0)
     if matrix:
         shopper_shop_pivot = shopper_shop_pivot.as_matrix()
+        if sparse:
+            shopper_shop_pivot = sp.sparse.csr_matrix(shopper_shop_pivot)
         #shopper_shop_pivot = sp.sparse.csr_matrix(shopper_shop_pivot.values)
-    return shopper_shop_pivot
+    if sub:
+        return mac_sub, shopper_shop_pivot 
+    else:     
+        return shopper_shop_pivot
 
 
 def pivot_to_common(pivot_matrix, zero_fill = True, normalise = True):
@@ -164,7 +175,7 @@ def graph_modularity(G):
             modularity += G[i][j] - np.sum(G[i])*np.sum(G[j])/(2*m)
 
 
-def adjacency(so=True, excel=False, graph=False):
+def adjacency(so=True, excel=False, graph=False, sparse=True):
     mm_df = utils.import_signals(signal_type=1)
     mm_df = mm_df[mm_df.store_id.notnull()]
     clean_df = clean_store_id(mm_df, store_only=so)
@@ -177,7 +188,12 @@ def adjacency(so=True, excel=False, graph=False):
         df = pd.DataFrame(common)
         df.to_csv('adjacency.csv', index=False, header=False)
     if graph:
-        G = nx.from_numpy_matrix(common)
+        if sparse:
+            G = nx.from_scipy_sparse_matrix(common, create_using=nx.MultiDiGraph())
+            G = nx.relabel_nodes(G, dict(enumerate(macs)))
+        else:
+            G = nx.from_numpy_matrix(common, create_using=nx.MultiDiGraph)
+            G = nx.relabel_nodes(G, dict(enumerate(macs)))
         return G, macs
     return common, macs
 
@@ -224,26 +240,24 @@ def venn_diagram(sets, set_labels=('community 1', 'community 2', 'community 3'),
     fig.show()
 
 
-def visits_from_each_community(signal_df, lm_file='lm_weighted.csv'):
+def visits_from_each_community(signal_df, lm_file='lm_subset_weighted.csv', full=False):
     df = pd.read_csv(dir_path + '/../data/' + lm_file)
     grouped_df = df.groupby('community')
     groups = [grouped_df.get_group(i) for i in range(3)]
 
-    macs = df['mac address'].tolist()
-    comms = df['community'].tolist()
+    macs = df.mac_address.tolist()
+    comms = df.community.tolist()
 
-    community_df = {i: j for (i,j) in list(zip(macs, comms))}
+    signal_df = signal_df[signal_df.mac_address.isin(macs)]
+    full_df = pd.merge(signal_df, df, on='mac_address', how='left')
+    if full:
+        return full_df
 
-    macs = signal_df.mac_address.tolist()
-    community_column = [community_df[macs[i]] for i in range(len(macs))]
+    comm_grouped = full_df.groupby('community')
+    comm_groups = [comm_grouped.get_group(i) for i in range(len(full_df.community.drop_duplicates().stolist()))]
 
-    signal_df['community'] = community_column
-
-    comm_grouped = signal_df.groupby('community')
-    comm_groups = [comm_grouped.get_group(i) for i in range(3)]
-
-    store_list = signal_df.store_id.drop_duplicates().tolist()
-    store_grouped = signal_df.groupby('store_id')
+    store_list = full_df.store_id.drop_duplicates().tolist()
+    store_grouped = full_df.groupby('store_id')
     store_groups = [store_grouped.get_group(i) for i in store_list]
 
     return comm_grouped, comm_groups, store_grouped, store_groups, store_list
@@ -256,6 +270,27 @@ def store_pie_chart(store_grouped, store_name):
     fig = plt.figure()
     plt.pie(communities, labels=labels, autopct='%1.1f%%')
     fig.show()
+
+
+def community_pie_chart(signal_df, lm_file='lm_subset_unweighted.csv'):
+    full_df = visits_from_each_community(signal_df, lm_file, full=True)
+    comm_grouped = full_df.groupby('community')
+    #return comm_grouped
+    store_visits = {
+        comm.community.tolist()[0]: {
+            store: comm.store_id.tolist().count(store) for store in comm.store_id.unique().tolist()
+            }
+             for comm in [comm_grouped.get_group(i) for i in range(4)]
+             }
+    return store_visits
+
+
+def community_pie_charts(store_visit_dictionary, community):
+    store_dict = store_visit_dictionary[community]
+    fig = plt.figure()
+    plt.pie(store_dict.values(), labels=list(store_dict.keys()), autopct='%1.1f%%')
+    fig.show()
+    
 
 
 # def louvain_modularity(G):
