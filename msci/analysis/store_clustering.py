@@ -201,8 +201,12 @@ def bin(data, bin_start=1., first_bin_width=1.4, a=1.6, drop_zeros=True):
     return log_bin.log_bin(data, bin_start, first_bin_width, a, drop_zeros=drop_zeros)
 
 
-
-
+def create_word_network():
+    keyword_dict= keyword_dictionary()
+    ck = clean_keyword_dictionary(keyword_dict[0])
+    kn = keyword_network(ck)
+    word_degree = word_network_degree_distribution(kn[0], kn[1], kn[2], kn[3])
+    return kn, word_degree[0]
 
 
 
