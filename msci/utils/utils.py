@@ -97,6 +97,10 @@ def import_mac_addresses(mall='Mall of Mauritius', version=1, signal_type=None):
         mac_address_df = pd.read_csv(
             dir_path + '/../data/{}_featuresv2.csv'.format(malls[mall])
         )
+    elif version == 3:
+        mac_address_df = pd.read_csv(
+            dir_path + '/../data/{}_featuresv3.csv'.format(malls[mall])
+        )
     else:
         raise Exception("There is no version with this number. Please choose either 1 or 2!")
 
