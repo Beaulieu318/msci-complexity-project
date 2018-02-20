@@ -1,5 +1,5 @@
 import random
-from scipy.integrate import quad
+import numpy as np
 
 
 class Shopper:
@@ -9,8 +9,12 @@ class Shopper:
         :param name: (str) The name of the shopper.
         """
         self.name = str(name)
+
         self.location = None
         self.last_location = None
+        self.location_index = None
+        self.last_location_index = None
+
         self.locations_visited = []
         self.shopping = True
         self.start_time = start_time
@@ -26,16 +30,17 @@ class Shopper:
         """
         The method called to make the shopper perform an action.
         :param environment: (Object) contains the environment of the shop.
+        :param minutes_per_iteration: (float) number of minutes per iteration.
         """
         if self.shopping:
 
-            probability_leaving = self.leave_distribution.cdf(self.length_of_stay)
+            # probability_leaving = self.leave_distribution.pdf(self.length_of_stay)
             # probability_leaving = quad(self.leave_distribution, 0, self.length_of_stay)[0]
 
-            if random.random() < probability_leaving:
+            if random.random() * 10000 < self.length_of_stay:
                 self.leave(environment)
             else:
-                self.move(environment)
+                self.move(environment, minutes_per_iteration)
                 # self.look()
                 # self.buy()
 
@@ -44,13 +49,37 @@ class Shopper:
 
         return self.location
 
-    def move(self, environment):
+    def move(self, environment, minutes_per_iteration):
         """
         The shopper moves in a direction.
         :param environment: (Object) contains the environment of the shop.
+        :param minutes_per_iteration: (float) number of minutes per iteration.
         """
+        max_speed_meters_per_minute = 83
+        max_speed_meters_per_iteration = max_speed_meters_per_minute * minutes_per_iteration
+
+        probability_leaving_shop = 0.05
+
         self.last_location = self.location
-        self.location = environment.locations[random.randint(0, len(environment.locations)-1)]
+        self.last_location_index = self.location_index
+
+        if self.last_location is None:
+            # First shop visited
+            self.location_index = random.randint(0, len(environment.locations)-1)
+            self.location = environment.locations[self.location_index]
+
+        else:
+            # Next shops visited
+
+            # Probability of leaving a shop
+            if random.random() < probability_leaving_shop:
+
+                # Max speed limitation
+                possible_locations_index = np.where(
+                    environment.shop_distance_matrix[self.last_location_index] < max_speed_meters_per_iteration
+                )[0]
+                self.location_index = np.random.choice(possible_locations_index)
+                self.location = environment.locations[self.location_index]
 
         if self.location != self.last_location:
             environment.move_shopper(self)
@@ -58,6 +87,8 @@ class Shopper:
 
     def leave(self, environment):
         self.last_location = self.location
+        self.last_location_index = self.location_index
+
         self.location = None
 
         if self.location != self.last_location:

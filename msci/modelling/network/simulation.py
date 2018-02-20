@@ -16,8 +16,8 @@ class NetworkSimulation:
         self.shoppers_history = []
         self.signal_history = []
 
-        self.start_date_time = datetime.datetime(year=2016, month=12, day=22, hour=7)
-        self.end_date_time = datetime.datetime(year=2016, month=12, day=22, hour=23)
+        self.start_date_time = datetime.datetime(year=2016, month=12, day=22, hour=9)
+        self.end_date_time = datetime.datetime(year=2016, month=12, day=23, hour=0)
         self.total_minutes = (self.end_date_time - self.start_date_time).seconds / 60
         self.minutes_per_iteration = 0
 
@@ -39,6 +39,7 @@ class NetworkSimulation:
             self._save_signal_history(date_time)
 
     def _add_new_shopper(self, date_time):
+        # This is wrong - there can actually be 20 shoppers made - need to change
         if len(self.shoppers) < self.max_shoppers:
             number_of_shoppers_added = random.randint(0, 20)
             for i in range(number_of_shoppers_added):
@@ -75,9 +76,7 @@ class NetworkSimulation:
     def create_mac_address_df(self):
         mac_address = []
         for shopper in self.shoppers:
-            mac_address.append([str(shopper), len(list(set(shopper.locations_visited))), shopper.length_of_stay, shopper.start_time])
+            mac_address.append([str(shopper), len(list(set(shopper.locations_visited))), shopper.length_of_stay*60, shopper.start_time])
 
         self.mac_address_df = pd.DataFrame(mac_address, columns=['mac_address', 'number_of_shops', 'length_of_stay', 'start_time'])
 
-    def distributions(self):
-        self.shopper_leave_distribution = None

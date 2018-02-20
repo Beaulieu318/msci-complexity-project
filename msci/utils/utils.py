@@ -107,16 +107,23 @@ def import_mac_addresses(mall='Mall of Mauritius', version=1, signal_type=None):
     return mac_address_df
 
 
-def import_shop_directory(mall='Mall of Mauritius'):
+def import_shop_directory(mall='Mall of Mauritius', version=1):
     malls = {
         'Mall of Mauritius': 'mauritius',
         'Phoenix Mall': 'phoenix',
         'Home & Leisure': 'home_and_leisure',
     }
 
-    directory_df = pd.read_csv(
-        dir_path + '/../data/{}_directory.csv'.format(malls[mall]),
-    )
+    if version == 1:
+        directory_df = pd.read_csv(
+            dir_path + '/../data/{}_directory.csv'.format(malls[mall]),
+        )
+    elif version == 2:
+        directory_df = pd.read_csv(
+            dir_path + '/../data/{}_directoryv2.csv'.format(malls[mall]),
+        )
+    else:
+        raise Exception("There is no version with this number. Please choose either 1 or 2!")
 
     return directory_df
 
