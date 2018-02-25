@@ -193,7 +193,7 @@ def _create_group(items):
     return values
 
 
-def animate(signal_df, mac_address_df, jn=False):
+def animate(signal_df, mac_address_df, jn=False, save=False, filename='animation.html'):
     """
     Create an animation of the mac addresses moving around the show
 
@@ -208,7 +208,10 @@ def animate(signal_df, mac_address_df, jn=False):
         return anim.run()
     else:
         a = anim.run()
-        plt.show()
+        if save:
+            a.save(filename, dpi=80)
+        else:
+            plt.show()
 
 
 """
