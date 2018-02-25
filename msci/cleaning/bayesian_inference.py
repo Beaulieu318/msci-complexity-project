@@ -7,20 +7,18 @@ import pandas as pd
 import matplotlib_venn as venn
 import time
 from sklearn.decomposition import PCA
+from msci.utils import utils
 
 
 FEATURE_LIST = [
-    'frequency',
     'length_of_stay',
     'radius_of_gyration',
     'count_density_variance',
     'av_speed',
     'av_turning_angle',
-    'total_turning_angle',
-    'av_turning_angle_velocity',
     'av_path_length',
-    'total_path_length',
     'av_straightness',
+    'turning_angle_density'
 ]
 
 """
@@ -39,7 +37,7 @@ def bayes_array(data, prior, likelihood):
     """
     likelihoods_stationary = likelihood[0](data)
     likelihoods_shopper = likelihood[1](data)
-    likelihood_worker = likelihood[2](data)
+    likelihoods_worker = likelihood[2](data)
     posterior_stationary = likelihoods_stationary*prior[0]
     posterior_shopper = likelihoods_shopper*prior[1]
     posterior_worker = likelihoods_worker*prior[2]
@@ -50,7 +48,7 @@ def bayes_array(data, prior, likelihood):
     return np.array([normal_stationary_posterior, normal_shopper_posterior, normal_worker_posterior])
 
 
-def prior_generator(p_stationary, mac_length):
+def prior_generator(mac_length, prior_list=[0.05, 0.9, 0.05], three_devices=True):
     """
     Generates array of priors for use as first step in sequential Bayes
 
@@ -58,9 +56,15 @@ def prior_generator(p_stationary, mac_length):
     :param mac_length: (int) number of mac addresses used
     :return: array of priors
     """
-    p_stat = np.array([p_stationary for i in range(mac_length)])
-    p_shop = np.array([1 - p_stationary for i in range(mac_length)])
-    return np.array([p_stat, p_shop])
+    if three_devices:
+        p_stat = np.array([prior_list[0] for i in range(mac_length)])
+        p_shop = np.array([prior_list[1] for i in range(mac_length)])
+        p_work = np.array([prior_list[2] for i in range(mac_length)])
+        return np.array([p_stat, p_shop, p_work])
+    else:
+        p_stat = np.array([prior_list[0] for i in range(mac_length)])
+        p_shop = np.array([prior_list[1] for i in range(mac_length)])
+        return np.array([p_stat, p_shop])
 
 
 """
@@ -80,11 +84,11 @@ def likelihood_function_generator(mac_address_df, feature, dev_type, plot=False)
     """
     mac_address_high_count_df = mac_address_df[mac_address_df.frequency > 10]
     if dev_type == 'stationary':
-        values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 1][feature].values.ravel()
+        values = mac_address_high_count_df[mac_address_high_count_df.dbscan_label == 'Stationary'][feature].values.ravel()
     elif dev_type == 'shopper':
-        values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 0][feature].values.ravel()
+        values = mac_address_high_count_df[mac_address_high_count_df.dbscan_label == 'Shopper'][feature].values.ravel()
     elif dev_type == 'worker':
-        values = mac_address_high_count_df[mac_address_high_count_df.is_out_of_hours == 0][feature].values.ravel()
+        values = mac_address_high_count_df[mac_address_high_count_df.dbscan_label == 'Mall Worker'][feature].values.ravel()
     else:
         raise Exception("The dev_type is not a valid entry. Needs to be either 'stationary' or 'shopper'")
     values = values[np.isfinite(values)]
@@ -106,7 +110,7 @@ def likelihood_dictionary(feature_df, feature_list):
     for feature in feature_list:
         feature_likelihoods[feature] = [
             likelihood_function_generator(feature_df, feature, dev_type='stationary'),
-            likelihood_function_generator(feature_df, feature, dev_type='shopper')
+            likelihood_function_generator(feature_df, feature, dev_type='shopper'),
             likelihood_function_generator(feature_df, feature, dev_type='worker')]
     return feature_likelihoods
 
@@ -116,7 +120,7 @@ Analysis
 """
 
 
-def sequential(prior, feature_df, feature_list):
+def sequential(prior_list, feature_df, feature_list, three_devices=True):
     """
     Applies bayes_array in sequence for a range of observables
 
@@ -125,16 +129,19 @@ def sequential(prior, feature_df, feature_list):
     :param feature_df: data frame
     :return: array of posteriors
     """
-    priors = prior_generator(prior, len(feature_df))
+    feature_df = feature_df[feature_df.frequency > 10]
+    unclassified_macs = feature_df[feature_df.dbscan_label == 'Not Classified'].mac_address.tolist()
+    unclassified_df = feature_df[feature_df.mac_address.isin(unclassified_macs)]
+    priors = prior_generator(len(unclassified_macs), prior_list, three_devices=three_devices)
     feature_likelihoods = likelihood_dictionary(feature_df, feature_list)
     prob_estimates = [priors]
     for feature in feature_list:
         print(feature)
-        data = feature_df[feature].tolist()
+        data = unclassified_df[feature].tolist()
         likelihood = feature_likelihoods[feature]
         posterior = bayes_array(data, prob_estimates[-1], likelihood)
         prob_estimates.append(posterior)
-    return prob_estimates
+    return prob_estimates, unclassified_macs, unclassified_df
 
 
 def plot_probability_trace(prob_estimates, feature_list):
@@ -171,13 +178,32 @@ def inference_result_analysis(posteriors, feature_df, confidence, signal_df, sta
     final_probabilities = posteriors[stage]
     stationary_condition = final_probabilities[0] > confidence
     moving_condition = final_probabilities[1] > confidence
+    worker_condition = final_probabilities[2] > confidence
     stationary_devices = [macs[i] for i in range(len(stationary_condition)) if stationary_condition[i]]
-    moving_devices = [macs[i] for i in range(len(moving_condition)) if moving_condition[i]]
+    shopper_devices = [macs[i] for i in range(len(moving_condition)) if moving_condition[i]]
+    worker_devices = [macs[i] for i in range(len(worker_condition)) if worker_condition[i]]
     stationary_manufacturer = [manufacturers[i] for i in range(len(stationary_condition)) if stationary_condition[i]]
     print('Number of Stationary Devices = ', len(stationary_devices))
+    classified = stationary_devices + shopper_devices + worker_devices
+    unclassified = [i for i in macs if i not in classified]
     if plot_path:
         pfun.plot_path(signal_df, stationary_devices[:30])
-    return stationary_manufacturer, stationary_devices, moving_devices
+    return stationary_manufacturer, stationary_devices, shopper_devices, worker_devices, unclassified
+
+
+def label_into_df(feature_df):
+    s = sequential([0.025, 0.95, 0.025], feature_df, FEATURE_LIST)
+    ira = inference_result_analysis(s[0], s[-1], 0.99, 0)
+    stationary = {i: 'Stationary' for i in ira[1]}
+    shopper = {i: 'Shopper' for i in ira[2]}
+    worker = {i: 'Mall Worker' for i in ira[3]}
+    unclassified = {i: 'Not Classified' for i in ira[4]}
+    label_dict = {**stationary, **shopper, **worker, **unclassified}
+    macs = list(label_dict.keys())
+    labels = list(label_dict.values())
+    bayesian_labelled_df = pd.DataFrame({'mac_address': macs, 'bayesian_label': labels})
+    merged_df = pd.merge(feature_df, bayesian_labelled_df, on='mac_address', how='left')
+    return merged_df, bayesian_labelled_df
 
 
 def inference_progress(posteriors, feature_df, confidence, signal_df):
