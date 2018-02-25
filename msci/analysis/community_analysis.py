@@ -290,7 +290,32 @@ def community_pie_charts(store_visit_dictionary, community):
     fig = plt.figure()
     plt.pie(store_dict.values(), labels=list(store_dict.keys()), autopct='%1.1f%%')
     fig.show()
-    
+
+
+def modularity(community_dictionary, common_stores_matrix, directed=True):
+    """
+    Function to compute modularity of a weighted network
+
+    https://arxiv.org/pdf/0803.0476.pdf (undirected case)
+    https://arxiv.org/pdf/0801.1647.pdf (directed case)
+
+    :param community_dictionary: (dict) {i: c} i \in shopper_population, c = community number
+    :param common_stores_matrix: (numpy matrix) weighted matrix for mutual stores visited 
+    :return: (float) Modularity, Q
+    """    
+    m = 0.5*np.sum(common_stores_matrix)
+    Q = 0
+    for i in range(len(community_dictionary)):
+        for j in range(len(community_dictionary)):
+            if community_dictionary[i] == community_dictionary[j]:
+                Aij = community[i][j]
+                if directed:
+                    kikj = np.sum(common_stores_matrix[i]*np.sum(common_stores_matrix.T[j]))
+                    Q += Aij/m - kikj/(m**2)
+                else:
+                    kikj = np.sum(common_stores_matrix[i])*np.sum(common_stores_matrix[j])
+                    Q += (Aij - kikj/(2*m))/(2*m)
+    return Q
 
 
 # def louvain_modularity(G):
