@@ -24,7 +24,7 @@ class NetworkSimulation:
         self.signal_df = None
         self.mac_address_df = None
 
-        self.shopper_leave_distribution = None
+        self.length_of_stay_distribution = None
 
     def iterate(self, max_iterations):
 
@@ -47,7 +47,7 @@ class NetworkSimulation:
                     Shopper(
                         name=len(self.shoppers) + 1,
                         start_time=date_time,
-                        leave_distribution=self.shopper_leave_distribution)
+                        maximum_length_of_stay=self.length_of_stay_distribution.resample(size=1)[0])
                 )
 
     def _action_shopper(self):

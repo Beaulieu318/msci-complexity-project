@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Shopper:
-    def __init__(self, name, start_time, leave_distribution):
+    def __init__(self, name, start_time, maximum_length_of_stay):
         """
         Initiates the shopper (agent) with a name and starting coordinates.
         :param name: (str) The name of the shopper.
@@ -21,7 +21,7 @@ class Shopper:
         self.length_of_stay = 0
         self.iterations = 0
 
-        self.leave_distribution = leave_distribution
+        self.maximum_length_of_stay = maximum_length_of_stay
 
     def __str__(self):
         return self.name
@@ -37,7 +37,7 @@ class Shopper:
             # probability_leaving = self.leave_distribution.pdf(self.length_of_stay)
             # probability_leaving = quad(self.leave_distribution, 0, self.length_of_stay)[0]
 
-            if random.random() * 10000 < self.length_of_stay:
+            if self.maximum_length_of_stay < self.length_of_stay:
                 self.leave(environment)
             else:
                 self.move(environment, minutes_per_iteration)
