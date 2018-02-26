@@ -9,6 +9,9 @@ from scipy.spatial.distance import directed_hausdorff
 from itertools import product
 from scipy import stats
 
+from tqdm import tqdm_notebook as tqdm
+
+
 def path_length(signal_df):
     macs = signal_df.mac_address.drop_duplicates().tolist()
     grouped = signal_df.groupby('mac_address')
@@ -154,14 +157,17 @@ def shop_areas(signal_df, store_only=True):
 
 
 def efficient_area(signal_df, store_only=True):
+    print('test')
     stores = signal_df.store_id.drop_duplicates().tolist()
     if store_only:
         stores = [i for i in stores if i[0] == 'B']
     grouped = signal_df.groupby('store_id')
+    print('test1')
     groups = [grouped.get_group(i) for i in stores]
+    print('test2')
     areas = {}
     plot_points = {}
-    for g in range(len(groups)):
+    for g in tqdm(range(len(groups))):
         area = 0
         ym = {}
         x = np.round(groups[g].x.tolist()).astype('int')

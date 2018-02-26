@@ -93,7 +93,6 @@ def plot_path_jn(signal_df, mac_address_df, axes, plot_type='path', label=True):
         else:
             axes.plot(group.x, group.y, label=title)
 
-    axes.set_title('Stores in Mall of Mauritius')
     axes.set_xlabel('x (m)')
     axes.set_ylabel('y (m)')
     axes.set_xlim((0, 350))
@@ -131,6 +130,28 @@ def plot_points_on_map(x, y, c='r', label=False):
     #fig.show()
 
 
+def plot_points_on_map_jn(x, y, axes, c='r', label=False):
+    """
+    Plots list of x,y coordinates onto a map
+
+    :param x: (list) A list of x coordinates
+    :param y: (list) A list of y coordinates
+    :param c: (str) color of plot
+    :param label: (Boolean) Where the coordinates should be labelled with numbers
+    :return: A plot
+    """
+
+    img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
+    axes.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.05)
+
+    axes.scatter(x, y, c=c, s=2, label=label)
+
+    axes.set_xlabel('x (m)', fontsize=15)
+    axes.set_ylabel('y (m)', fontsize=15)
+    axes.set_xlim((0, 350))
+    axes.set_ylim((0, 200))
+
+
 """
 Histogram plots against time
 """
@@ -153,8 +174,8 @@ def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
         signal_time_df.rename(columns={'mac_address': label}, inplace=True)
 
     ax = signal_time_df.plot(ax=axes)
-    ax.set_xlabel('Time (hh:mm)')
-    ax.set_ylabel('Count of mac addresses per {} mins (no.)'.format(minute_resolution))
+    ax.set_xlabel('Time (month-day hour)', fontsize=15)
+    ax.set_ylabel('Count of mac addresses \n per {} mins (no.)'.format(minute_resolution), fontsize=15)
 
 
 """
