@@ -113,10 +113,8 @@ def sampled_hausdorff(pos_dict, macs, N, samples):
 if data_import:
     signal_df = utils.import_signals('Mall of Mauritius', version=4)
 
-    dbclean_df = utils.import_mac_addresses(version=3)
-    # bayes_df = pd.read_csv(dir_path + '/../data/bayesian_label.csv')
-    shopper_df = dbclean_df[dbclean_df.dbscan_label == 'Shopper']  # .append(bayes_df[bayes_df.bayesian_label == 'Shopper'])
-
+    mac_address_df = utils.import_mac_addresses(version=4)
+    shopper_df = mac_address_df[mac_address_df.bayesian_label == 'Shopper']
     cleaner_signal_df = signal_df[signal_df.mac_address.isin(shopper_df.mac_address)]
 
     # analysis_mac_addresses = sorted(cleaner_signal_df.mac_address.unique().tolist()[:100] + cleaner_signal_df.mac_address.unique().tolist()[5000:5200])
