@@ -120,9 +120,10 @@ if data_import:
     # analysis_mac_addresses = sorted(cleaner_signal_df.mac_address.unique().tolist()[:100] + cleaner_signal_df.mac_address.unique().tolist()[5000:5200])
 
     shopper_macs = sorted(
-        cleaner_signal_df.mac_address.unique().tolist()[:200] + cleaner_signal_df.mac_address.unique().tolist()[
-                                                                600:800] + cleaner_signal_df.mac_address.unique().tolist()[
-                                                                           1000:1200])
+        cleaner_signal_df.mac_address.unique().tolist()  # [:200]
+        # + cleaner_signal_df.mac_address.unique().tolist()[600:800]
+        # + cleaner_signal_df.mac_address.unique().tolist()[1000:1200]
+    )
 
     pos_dict = position_dictionary(
         cleaner_signal_df[cleaner_signal_df.mac_address.isin(shopper_macs)].sort_values('mac_address'),
