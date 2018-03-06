@@ -10,7 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.cm as cm
-matplotlib.style.use('ggplot')
+
 from mpl_toolkits.mplot3d import Axes3D
 
 import seaborn as sns
@@ -23,11 +23,16 @@ from msci.utils import utils
 from msci.analysis.networks import *
 import msci.utils.plot as pfun
 
+from tqdm import tqdm
+
 from msci.analysis.complexity import matrix_correlation
+
+matplotlib.style.use('ggplot')
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 data_import = True
+
 
 def position_dictionary(signal_df, list_type=True):
     signal_df = signal_df.sort_values('date_time')
@@ -45,16 +50,16 @@ def position_dictionary(signal_df, list_type=True):
 def pairwise_haussdorf(positions, macs, undirected=True):
     ph = np.zeros((len(macs), len(macs)))
     if undirected:
-        for i in range(len(macs)):
+        for i in tqdm(range(len(macs))):
             for j in range(i, len(macs)):
                 hd = undirected_hausdorff(positions[i], positions[j])
                 ph[i][j] = hd
                 ph[j][i] = hd
     else:
-        for i in range(len(macs)):
-                for j in range(len(macs)): 
-                    hd = directed_hausdorff(positions[i], positions[j])[0]
-                    ph[i][j] = hd
+        for i in tqdm(range(len(macs))):
+            for j in range(len(macs)):
+                hd = directed_hausdorff(positions[i], positions[j])[0]
+                ph[i][j] = hd
     return ph
 
 
@@ -72,10 +77,10 @@ def dbscan_cluster(haussdorf_matrix, resolution, samples):
 
 
 def plot_community_path(db_labels, macs, signal_df):
-	clusters = [np.array(macs)[np.where(db_labels==i)] for i in list(set(db_labels))]
-	for c in clusters:
-		pfun.plot_path(signal_df, c.tolist(), scatter=False)
-	return clusters
+    clusters = [np.array(macs)[np.where(db_labels == i)] for i in list(set(db_labels))]
+    for c in clusters:
+        pfun.plot_path(signal_df, c.tolist(), scatter=False)
+    return clusters
 
 
 def plot_3d(data):
@@ -85,7 +90,7 @@ def plot_3d(data):
     X = data[0]
     Y = data[1]
     Z = data[2]
-    ax.scatter(X,Y,Z)
+    ax.scatter(X, Y, Z)
     ax.set_xlabel('Radius of Gyration')
     ax.set_ylabel('Speed')
     ax.set_zlabel('Length of Stay')
@@ -93,20 +98,19 @@ def plot_3d(data):
 
 
 def sampled_hausdorff(pos_dict, macs, N, samples):
-	t0 = time.time()
-	mac_samples = []
-	hausdorffs = []
-	for i in range(samples):
-		subset_macs = np.random.choice(macs, N)
-		mac_samples.append(subset_macs)
-		ph = pairwise_haussdorf(pos_dict, subset_macs)
-		hausdorffs.append(ph)
-	t = time.time() - t0
-	return mac_samples, hausdorffs, t
+    t0 = time.time()
+    mac_samples = []
+    hausdorffs = []
+    for i in range(samples):
+        subset_macs = np.random.choice(macs, N)
+        mac_samples.append(subset_macs)
+        ph = pairwise_haussdorf(pos_dict, subset_macs)
+        hausdorffs.append(ph)
+    t = time.time() - t0
+    return mac_samples, hausdorffs, t
 
 
 if data_import:
-
     signal_df = utils.import_signals('Mall of Mauritius', version=4)
 
     dbclean_df = utils.import_mac_addresses(version=3)
@@ -115,21 +119,14 @@ if data_import:
 
     cleaner_signal_df = signal_df[signal_df.mac_address.isin(shopper_df.mac_address)]
 
-    #analysis_mac_addresses = sorted(cleaner_signal_df.mac_address.unique().tolist()[:100] + cleaner_signal_df.mac_address.unique().tolist()[5000:5200])
+    # analysis_mac_addresses = sorted(cleaner_signal_df.mac_address.unique().tolist()[:100] + cleaner_signal_df.mac_address.unique().tolist()[5000:5200])
 
-    shopper_macs = sorted(cleaner_signal_df.mac_address.unique().tolist()[:200] + cleaner_signal_df.mac_address.unique().tolist()[600:800] + cleaner_signal_df.mac_address.unique().tolist()[1000:1200])
+    shopper_macs = sorted(
+        cleaner_signal_df.mac_address.unique().tolist()[:200] + cleaner_signal_df.mac_address.unique().tolist()[
+                                                                600:800] + cleaner_signal_df.mac_address.unique().tolist()[
+                                                                           1000:1200])
 
     pos_dict = position_dictionary(
-        cleaner_signal_df[cleaner_signal_df.mac_address.isin(shopper_macs)].sort_values('mac_address'), 
+        cleaner_signal_df[cleaner_signal_df.mac_address.isin(shopper_macs)].sort_values('mac_address'),
         list_type=True
-        )
-
-
-
-
-
-
-
-
-
-
+    )
