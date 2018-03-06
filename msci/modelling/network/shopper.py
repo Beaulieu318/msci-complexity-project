@@ -16,12 +16,15 @@ class Shopper:
         self.last_location_index = None
 
         self.locations_visited = []
+        self.locations_index_visited = []
         self.shopping = True
         self.start_time = start_time
         self.length_of_stay = 0
         self.iterations = 0
 
         self.maximum_length_of_stay = maximum_length_of_stay
+
+        self.direction = np.zeros(2)
 
     def __str__(self):
         return self.name
@@ -69,8 +72,6 @@ class Shopper:
             self.location = environment.locations[self.location_index]
 
         else:
-            # Next shops visited
-
             # Probability of leaving a shop
             if random.random() < probability_leaving_shop:
 
@@ -78,12 +79,32 @@ class Shopper:
                 possible_locations_index = np.where(
                     environment.shop_distance_matrix[self.last_location_index] < max_speed_meters_per_iteration
                 )[0]
-                self.location_index = np.random.choice(possible_locations_index)
+
+                probabilities = np.zeros(len(possible_locations_index))
+
+                # Increase probability for forwards direction
+                r1r2 = np.dot(
+                    environment.shop_direction_matrix[self.last_location_index][possible_locations_index],
+                    self.direction,
+                )
+                probabilities[np.where(r1r2 == 0)] = 0.5
+                probabilities[np.where(r1r2 > 0)] = 0.9
+                probabilities[np.where(r1r2 < 0)] = 0.1
+
+                # Decrease probability to return to a shop
+                probabilities[np.isin(possible_locations_index, self.locations_index_visited)] += 0.05
+                probabilities[~np.isin(possible_locations_index, self.locations_index_visited)] += 0.95
+
+                # Next shops visited
+                self.location_index = np.random.choice(possible_locations_index, p=probabilities/sum(probabilities))
                 self.location = environment.locations[self.location_index]
 
         if self.location != self.last_location:
+            if self.last_location is not None:
+                self.direction = environment.shop_direction_matrix[self.last_location_index][self.location_index]
             environment.move_shopper(self)
             self.locations_visited.append(self.location)
+            self.locations_index_visited.append(self.location_index)
 
     def leave(self, environment):
         self.last_location = self.location
