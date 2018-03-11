@@ -24,7 +24,7 @@ def create_mac_address_df(signal_df):
     return mac_address_df
 
 
-def calculate_radius_gyration(signal_df, mac_address_df):
+def calculate_radius_gyration(signal_df, mac_address_df, remove_consecutive=False):
     """
     Calculates the radius of gyration which is a measure of how far the mac address moves from their central position
 
@@ -37,8 +37,13 @@ def calculate_radius_gyration(signal_df, mac_address_df):
     macs = mac_address_df.mac_address.tolist()
     centroids = []
     gyrations = []
-    for mac in tqdm(range(len(macs)), desc='Radius of Gyration'):
-        r = signal_mac_group.get_group(macs[mac])[['x', 'y']].as_matrix()
+    for mac in tqdm(macs, desc='Radius of Gyration'):
+        mac_signals_df = signal_mac_group.get_group(mac)
+
+        if remove_consecutive:
+            mac_signals_df = mac_signals_df.loc[mac_signals_df.store_id.shift(-1) != mac_signals_df.store_id]
+
+        r = mac_signals_df[['x', 'y']].as_matrix()
         r_cm = np.mean(r, axis=0)
         displacement = r - r_cm
         rms = np.sqrt(np.mean(displacement[:, 0]**2 + displacement[:, 1]**2))
@@ -144,7 +149,7 @@ def calculate_average_speed(signal_df, mac_address_df):
     return av_speeds
 
 
-def calculate_turning_angle(signal_df, mac_address_df):
+def calculate_turning_angle(signal_df, mac_address_df, remove_consecutive=False):
     """
     Calculate the average and total turning angle as well as the change in turning angle (turning angle velocity)
 
@@ -164,6 +169,9 @@ def calculate_turning_angle(signal_df, mac_address_df):
     av_turning_angle_velocities = []
     for mac in tqdm(macs, desc='Turning Angle'):
         mac_signals_df = signal_mac_group.get_group(mac)
+
+        if remove_consecutive:
+            mac_signals_df = mac_signals_df.loc[mac_signals_df.store_id.shift(-1) != mac_signals_df.store_id]
 
         av_turning_angle = np.nan
         av_turning_angle_velocity = np.nan
@@ -227,7 +235,7 @@ def calculate_path_length(signal_df, mac_address_df):
     return av_path_lengths, total_path_lengths
 
 
-def calculate_straightness(signal_df, mac_address_df):
+def calculate_straightness(signal_df, mac_address_df, remove_consecutive=False):
     """
     Calculate the straightness (add two paths together and divide by the total displacement) of each mac address
 
@@ -244,6 +252,9 @@ def calculate_straightness(signal_df, mac_address_df):
     av_straightnesses = []
     for mac in tqdm(macs, 'Straighness'):
         mac_signals_df = signal_mac_group.get_group(mac)
+
+        if remove_consecutive:
+            mac_signals_df = mac_signals_df.loc[mac_signals_df.store_id.shift(-1) != mac_signals_df.store_id]
 
         av_straightness = np.nan
 

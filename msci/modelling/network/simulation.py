@@ -30,6 +30,9 @@ class NetworkSimulation:
         self.length_of_stay_distribution = None
         self.arrival_distribution = None
 
+        self.A = None
+        self.pi = None
+
     def iterate(self, max_iterations):
 
         self.minutes_per_iteration = self.total_minutes / max_iterations
@@ -64,7 +67,9 @@ class NetworkSimulation:
                 Shopper(
                     name=len(self.all_shoppers) + 1,
                     start_time=start_time,
-                    maximum_length_of_stay=length_of_stay
+                    maximum_length_of_stay=length_of_stay,
+                    A=self.A,
+                    pi=self.pi,
                 )
             )
             self.shoppers_arrival_times[i] = start_time
@@ -104,11 +109,19 @@ class NetworkSimulation:
                     str(shopper.location),
                 ])
 
-    def create_signal_df(self):
+    def create_signal_df(self, uncertainty=None):
         self.signal_df = pd.DataFrame(self.signal_history, columns=['mac_address', 'date_time', 'store_id'])
         self.signal_df = pd.merge(self.signal_df, self.environment.locations_df[['store_id', 'centroid']], on='store_id', how='left')
-        self.signal_df['x'] = self.signal_df.centroid.str[0].astype(float)  # + norm(loc=0, scale=5).rvs(size=len(self.signal_df))
-        self.signal_df['y'] = self.signal_df.centroid.str[1].astype(float)  # + norm(loc=0, scale=5).rvs(size=len(self.signal_df))
+
+        if uncertainty is None:
+            self.signal_df['x'] = self.signal_df.centroid.str[0].astype(float)
+            self.signal_df['y'] = self.signal_df.centroid.str[1].astype(float)
+        else:
+            self.signal_df['x'] = self.signal_df.centroid.str[0].astype(float) + \
+                norm(loc=0, scale=uncertainty).rvs(size=len(self.signal_df))
+            self.signal_df['y'] = self.signal_df.centroid.str[1].astype(float) + \
+                norm(loc=0, scale=uncertainty).rvs(size=len(self.signal_df))
+
         del self.signal_df['centroid']
 
     def create_mac_address_df(self):

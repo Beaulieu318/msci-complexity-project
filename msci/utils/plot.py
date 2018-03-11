@@ -168,8 +168,9 @@ def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
     :param label: (str) The label of the line
     :return: A plot
     """
-    signal_df.date_time = signal_df.date_time.dt.round(str(minute_resolution) + 'min')
-    signal_time_df = signal_df.groupby('date_time').mac_address.nunique().to_frame()
+    signal_df2 = signal_df.copy()
+    signal_df2.date_time = signal_df2.date_time.dt.round(str(minute_resolution) + 'min')
+    signal_time_df = signal_df2.groupby('date_time').mac_address.nunique().to_frame()
     if label is not None:
         signal_time_df.rename(columns={'mac_address': label}, inplace=True)
 

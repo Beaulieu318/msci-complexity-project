@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Shopper:
-    def __init__(self, name, start_time, maximum_length_of_stay):
+    def __init__(self, name, start_time, maximum_length_of_stay, A=None, pi=None):
         """
         Initiates the shopper (agent) with a name and starting coordinates.
         :param name: (str) The name of the shopper.
@@ -25,6 +25,9 @@ class Shopper:
         self.maximum_length_of_stay = maximum_length_of_stay
 
         self.direction = np.zeros(2)
+
+        self.A = A
+        self.pi = pi
 
     def __str__(self):
         return self.name
@@ -68,7 +71,8 @@ class Shopper:
 
         if self.last_location is None:
             # First shop visited
-            self.location_index = random.randint(0, len(environment.locations)-1)
+            possible_locations_index = range(len(environment.locations))
+            self.location_index = np.random.choice(possible_locations_index, p=self.pi / sum(self.pi))
             self.location = environment.locations[self.location_index]
 
         else:
@@ -88,12 +92,15 @@ class Shopper:
                     self.direction,
                 )
                 probabilities[np.where(r1r2 == 0)] = 0.5
-                probabilities[np.where(r1r2 > 0)] = 0.9
-                probabilities[np.where(r1r2 < 0)] = 0.1
+                probabilities[np.where(r1r2 > 0)] = 0.50
+                probabilities[np.where(r1r2 < 0)] = 0.50
 
-                # Decrease probability to return to a shop
-                probabilities[np.isin(possible_locations_index, self.locations_index_visited)] += 0.05
-                probabilities[~np.isin(possible_locations_index, self.locations_index_visited)] += 0.95
+                # # Decrease probability to return to a shop
+                probabilities[np.isin(possible_locations_index, self.locations_index_visited)] *= 0.05
+                probabilities[~np.isin(possible_locations_index, self.locations_index_visited)] *= 0.95
+
+                # Transition probabilities from real data
+                probabilities *= self.A[self.last_location_index][possible_locations_index]
 
                 # Next shops visited
                 self.location_index = np.random.choice(possible_locations_index, p=probabilities/sum(probabilities))

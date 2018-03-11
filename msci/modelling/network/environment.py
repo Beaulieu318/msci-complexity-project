@@ -41,3 +41,18 @@ class Environment:
             for j in range(self.shop_distance_matrix.shape[1]):
                 self.shop_distance_matrix[i][j] = distance(self.locations_df.iloc[i], self.locations_df.iloc[j])
                 self.shop_direction_matrix[i][j] = direction(self.locations_df.iloc[i], self.locations_df.iloc[j])
+
+    def realign_transition_matrix(self, shop_names, transition_matrix, initial_probabilities):
+        x = shop_names
+        y = self.locations
+
+        index = np.argsort(x)
+        sorted_x = x[index]
+        sorted_index = np.searchsorted(sorted_x, y)
+
+        yindex = np.take(index, sorted_index, mode="clip")
+        mask = x[yindex] != y
+
+        result = np.ma.array(yindex, mask=mask)
+
+        return transition_matrix[result][:, result], initial_probabilities[result]
