@@ -211,7 +211,7 @@ def visitors_area(signal_df, store_only=True):
     else:
         store_id_df, areas = efficient_area(signal_df, store_only=False)[:2]
     areas = [areas[a] for a in list(areas)]
-    visitor_numbers = [len(i.mac_address.tolist()) for i in store_id_df]
+    visitor_numbers = [len(i.mac_address.unique().tolist()) for i in store_id_df]
     log_vis = np.log10(visitor_numbers)
     log_ar = np.log10(areas)
     fig = plt.figure()
