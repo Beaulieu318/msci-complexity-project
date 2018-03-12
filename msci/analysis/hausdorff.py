@@ -47,7 +47,7 @@ def position_dictionary(signal_df, list_type=True):
         return positions
 
 
-def pairwise_haussdorf(positions, macs, undirected=True):
+def pairwise_hausdorff(positions, macs, undirected=True):
     ph = np.zeros((len(macs), len(macs)))
     if undirected:
         for i in tqdm(range(len(macs))):
@@ -61,6 +61,20 @@ def pairwise_haussdorf(positions, macs, undirected=True):
                 hd = directed_hausdorff(positions[i], positions[j])[0]
                 ph[i][j] = hd
     return ph
+
+
+def partitioned_pairwise_hausdorff(positions, macs, i, undirected=True):
+    ph_row = np.zeros(len(macs))
+    if undirected:
+        for j in tqdm(range(i, len(macs))):
+            hd = undirected_hausdorff(positions[i], positions[j])
+            ph_row[j] = hd
+        return ph_row
+    else:
+        for j in range(len(macs)):
+            hd = directed_hausdorff(positions[i], positions[j])[0]
+            ph_row[j] = hd
+        return ph_row
 
 
 def undirected_hausdorff(path_a, path_b):
