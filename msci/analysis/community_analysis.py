@@ -72,7 +72,8 @@ def pivot_to_common(pivot_matrix, zero_fill = True, normalise = True):
         d = np.diagonal(common)[:, np.newaxis]
         common = common/d
         assert np.sum((np.diagonal(common) == np.ones(np.shape(common)[0])).astype(int)) == np.shape(common)[0]
-    np.fill_diagonal(common, 0)
+    if zero_fill:
+        np.fill_diagonal(common, 0)
     return common
 
 
