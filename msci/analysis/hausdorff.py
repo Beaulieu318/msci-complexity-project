@@ -31,7 +31,7 @@ matplotlib.style.use('ggplot')
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-data_import = False
+data_import = True
 
 
 def position_dictionary(signal_df, list_type=True):
