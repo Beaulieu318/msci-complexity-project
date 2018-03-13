@@ -31,7 +31,7 @@ matplotlib.style.use('ggplot')
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-data_import = True
+data_import = False
 
 
 def position_dictionary(signal_df, list_type=True):
@@ -63,18 +63,29 @@ def pairwise_hausdorff(positions, macs, undirected=True):
     return ph
 
 
-def partitioned_pairwise_hausdorff(positions, macs, i, undirected=True):
-    ph_row = np.zeros(len(macs))
+def partitioned_pairwise_hausdorff(positions, macs, undirected=True, filename=None):
+    if filename is not None:
+        with open(filename, "w") as f:
+            f.write('')
+
     if undirected:
-        for j in tqdm(range(i, len(macs))):
-            hd = undirected_hausdorff(positions[i], positions[j])
-            ph_row[j] = hd
-        return ph_row
+        for i in tqdm(range(len(macs))):
+            ph_row = np.zeros(len(macs))
+            for j in tqdm(range(i, len(macs))):
+                hd = undirected_hausdorff(positions[i], positions[j])
+                ph_row[j] = hd
+            if filename is not None:
+                with open(filename, "a") as f:
+                    f.write((' '.join(['%10.6f ']*ph_row.size)+'\n\n') % tuple(ph_row))
     else:
-        for j in range(len(macs)):
-            hd = directed_hausdorff(positions[i], positions[j])[0]
-            ph_row[j] = hd
-        return ph_row
+        for i in tqdm(range(len(macs))):
+            ph_row = np.zeros(len(macs))
+            for j in range(len(macs)):
+                hd = directed_hausdorff(positions[i], positions[j])[0]
+                ph_row[j] = hd
+            if filename is not None:
+                with open(filename, "a") as f:
+                    f.write((' '.join(['%10.6f ']*ph_row.size)+'\n\n') % tuple(ph_row))
 
 
 def undirected_hausdorff(path_a, path_b):
