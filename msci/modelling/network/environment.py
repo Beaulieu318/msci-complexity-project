@@ -12,6 +12,7 @@ class Environment:
         self.locations = self.locations_df.store_id.as_matrix()
 
         self.locations_list = np.empty((len(self.locations), 0)).tolist()
+        self.angle_matrix = np.zeros((len(self.locations), len(self.locations)))
 
         self.shop_distance_matrix = np.zeros((len(self.locations_df), len(self.locations_df)))
         self.shop_direction_matrix = np.zeros((len(self.locations_df), len(self.locations_df), 2))
@@ -41,6 +42,35 @@ class Environment:
             for j in range(self.shop_distance_matrix.shape[1]):
                 self.shop_distance_matrix[i][j] = distance(self.locations_df.iloc[i], self.locations_df.iloc[j])
                 self.shop_direction_matrix[i][j] = direction(self.locations_df.iloc[i], self.locations_df.iloc[j])
+
+
+    def shop_transition_angles(self):
+        xbar = 0
+        ybar = 0
+        angles = []
+        xpos = self.locations_df.x.tolist()
+        ypos = self.locations_df.y.tolist()
+        for s in range(len(self.locations)):
+            x = xpos[s][0] - xbar
+            y = ypos[s][1] - ybar
+            if y > 0 and x > 0:
+                angles[s] = np.arctan(y/x)
+            elif y > 0 and x < 0:
+                angles[s] = np.pi - np.arctan(y/np.absolute(x))
+            elif y < 0 and x > 0:
+                angles[s] = 2*np.pi - np.arctan(np.absolute(y)/x)
+            else:
+                angles[s] = np.pi + np.arctan(y/x)
+        for i in range(len(angles)):
+            for j in range(len(angles)):
+                if abs(angles[i] - angles[j]) < np.pi:
+                    if angles[i] - angles[j] > 0:
+                        self.angle_matrix[i][j] = 0
+                    else:
+                        self.angle_matrix[i][j] = 1
+                else:
+                    self.angle_matrix[i][j] = 0.5
+
 
     def realign_transition_matrix(self, shop_names, transition_matrix, initial_probabilities):
         x = shop_names
