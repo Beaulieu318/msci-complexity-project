@@ -3,6 +3,7 @@ from msci.analysis.complexity import *
 from msci.cleaning.store_ids import *
 from msci.utils import log_bin
 from msci.utils import plot
+from msci.utils.utils import data_path
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,14 +27,12 @@ from msci.analysis import rake
 import html2text
 
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
 def wikipedia_result(search_term, lib_type='wikipedia'):
     if lib_type == 'wikipedia-api':
         wiki_wiki = wikipediaapi.Wikipedia(
             language='en',
             extract_format=wikipediaapi.ExtractFormat.WIKI
-            )
+        )
 
         page_py = wiki_wiki.page(search_term)
         if page_py.exists:
@@ -51,12 +50,12 @@ def wiki_search_exist(store_directory_list):
     return exist_boolean
 
 
-def keyword_processing(text_file, lib_type='rake', word_length_min=3, phrase_length_max=2, keyword_appearance_min = 2):
+def keyword_processing(text_file, lib_type='rake', word_length_min=3, phrase_length_max=2, keyword_appearance_min=2):
     if lib_type == 'rake':
         rake_object = rake.Rake(
-            dir_path + '/../data/SmartStoplist.txt', word_length_min, phrase_length_max, keyword_appearance_min
-            )
-        t = re.sub(r'\b\w{15,100}\b', '', text_file.lower().replace('/',''))
+            data_path + 'SmartStoplist.txt', word_length_min, phrase_length_max, keyword_appearance_min
+        )
+        t = re.sub(r'\b\w{15,100}\b', '', text_file.lower().replace('/', ''))
         t = clean_text(t)
         keywords = rake_object.run(t)
         keywords = clean_keywords(keywords)
@@ -70,27 +69,28 @@ def keyword_processing(text_file, lib_type='rake', word_length_min=3, phrase_len
 
 
 def html_txt(html_file):
-    #html = function_to_get_some_html()
-    html = open(dir_path + '/../data/htmls/' + html_file)
+    # html = function_to_get_some_html()
+    html = open(data_path + 'htmls/' + html_file)
     text = html2text.html2text(html)
     return text
-    
 
-def keyword_dictionary(store_directory_list='mall_of_mauritius_directory.csv', search_data='search_result_data.csv', website_data='mall_of_mauritius_store_descriptions.csv', full=True):
-    directory_df = pd.read_csv(dir_path + '/../data/' + store_directory_list)
-    search_df = pd.read_csv(dir_path + '/../data/' + search_data, encoding = "ISO-8859-1")
+
+def keyword_dictionary(store_directory_list='mall_of_mauritius_directory.csv', search_data='search_result_data.csv',
+                       website_data='mall_of_mauritius_store_descriptions.csv', full=True):
+    directory_df = pd.read_csv(data_path + '' + store_directory_list)
+    search_df = pd.read_csv(data_path + '' + search_data, encoding="ISO-8859-1")
     store_list = directory_df.store_name.tolist()
-    other = [[],[]]
+    other = [[], []]
     if full:
-        website_df = pd.read_csv(dir_path + '/../data/' + website_data, encoding = "ISO-8859-1")
+        website_df = pd.read_csv(data_path + '' + website_data, encoding="ISO-8859-1")
         store_categories = directory_df.store_category.tolist()
         keyword_dictionary = {i: {'category': j} for (i, j) in list(zip(store_list, store_categories))}
         for i in range(len(website_df)):
             store = website_df.iloc[i].store_name
             if store in store_list:
                 keyword_dictionary[store]['site keywords'] = keyword_processing(
-                    website_df.iloc[i].description, word_length_min=3, phrase_length_max=2, keyword_appearance_min = 1
-                    )
+                    website_df.iloc[i].description, word_length_min=3, phrase_length_max=2, keyword_appearance_min=1
+                )
             else:
                 other[0].append(store)
                 print(store)
@@ -105,11 +105,12 @@ def keyword_dictionary(store_directory_list='mall_of_mauritius_directory.csv', s
     return keyword_dictionary, other, store_list
     website_keywords = [keyword_processing(i) for i in website_df.description.tolist()]
     store_keywords = [keyword_processing(i) for i in search_df.keywords.tolist()]
-    return website_keywords, store_keywords, store_list, 
+    return website_keywords, store_keywords, store_list,
 
 
 def clean_text(text_file):
-    remove_words_containing = ['#', '@', 'ä', 'ó', '»', '=', '&', '_', '+', '%', '©', 'ç', 'é', 'è', 'å', 'î', '¾', 'î', 'à', '±', 'º', '¦', 'â']
+    remove_words_containing = ['#', '@', 'ä', 'ó', '»', '=', '&', '_', '+', '%', '©', 'ç', 'é', 'è', 'å', 'î', '¾', 'î',
+                               'à', '±', 'º', '¦', 'â']
     for char in remove_words_containing:
         text_file = ' '.join(s for s in text_file.split() if not any(c is char for c in s))
     return text_file
@@ -152,14 +153,14 @@ def keyword_network(formatted_keyword_dictionary, full=True):
         category_list = [i for i in category_list if type(i) is str]
         print(len(keyword_list) + len(category_list) + len(stores))
 
-    #category_nodes = [(i, dict(node_type = 'category')) for i in category_list]
-    #keyword_nodes = [(i, dict(node_type = 'keyword')) for i in keyword_list]
-    #store_nodes = [(i, dict(node_type = 'store')) for i in stores]
+    # category_nodes = [(i, dict(node_type = 'category')) for i in category_list]
+    # keyword_nodes = [(i, dict(node_type = 'keyword')) for i in keyword_list]
+    # store_nodes = [(i, dict(node_type = 'store')) for i in stores]
     if full:
-        category_nodes = [(i, dict(node_type = 'category', label= i)) for i in category_list]
-    keyword_nodes = [(i, dict(node_type = 'keyword', label = i)) for i in keyword_list]
-    store_nodes = [(i, dict(node_type = 'store', label = i)) for i in stores]
-    
+        category_nodes = [(i, dict(node_type='category', label=i)) for i in category_list]
+    keyword_nodes = [(i, dict(node_type='keyword', label=i)) for i in keyword_list]
+    store_nodes = [(i, dict(node_type='store', label=i)) for i in stores]
+
     KN = nx.DiGraph()
     if full:
         KN.add_nodes_from(category_nodes)
@@ -168,14 +169,15 @@ def keyword_network(formatted_keyword_dictionary, full=True):
 
     if full:
         category_edges = [(store, formatted_keyword_dictionary[store]['category'], 5) for store in stores]
-    keyword_edges = [(store, edge[0], int(edge[1])) for store in stores for edge in formatted_keyword_dictionary[store]['keywords']]
+    keyword_edges = [(store, edge[0], int(edge[1])) for store in stores for edge in
+                     formatted_keyword_dictionary[store]['keywords']]
 
     if full:
         KN.add_weighted_edges_from(category_edges)
     KN.add_weighted_edges_from(keyword_edges)
 
-    #nodes = list(KN.nodes)
-    #node_name_dict = {i: nodes[i] for i in range(len(nodes))}
+    # nodes = list(KN.nodes)
+    # node_name_dict = {i: nodes[i] for i in range(len(nodes))}
     if full:
         return KN, stores, category_list, keyword_list
     else:
@@ -190,7 +192,7 @@ def word_network_degree_distribution(G, store_list, category_list, keyword_list,
     degrees = list(nx.degree(G))
     keyword_degrees = [i for i in degrees if i[0] in keyword_list]
     store_degrees = [i for i in degrees if i[0] in store_list]
-    if category_list !=0:
+    if category_list != 0:
         category_degrees = [i for i in degrees if i[0] in category_list]
         degrees = {'keyword': keyword_degrees, 'store': store_degrees, 'category': category_degrees}
     else:
@@ -217,26 +219,18 @@ def bin(data, bin_start=1., first_bin_width=1.4, a=1.6, drop_zeros=True):
     return log_bin.log_bin(data, bin_start, first_bin_width, a, drop_zeros=drop_zeros)
 
 
-def create_word_network(store_csv='mall_of_mauritius_directory.csv', keyword_csv='search_result_data.csv', website_csv='mall_of_mauritius_store_descriptions.csv'):
+def create_word_network(store_csv='mall_of_mauritius_directory.csv', keyword_csv='search_result_data.csv',
+                        website_csv='mall_of_mauritius_store_descriptions.csv'):
     if website_csv == 0:
-        keyword_dict= keyword_dictionary(store_csv, keyword_csv, 0, full=False)
+        keyword_dict = keyword_dictionary(store_csv, keyword_csv, 0, full=False)
         ck = clean_keyword_dictionary(keyword_dict[0])
         kn = keyword_network(ck, full=False)
         word_degree = word_network_degree_distribution(kn[0], kn[1], 0, kn[2])
         key_degree = sorted(word_degree[0], key=operator.itemgetter(1), reverse=True)
         return kn, key_degree
     else:
-        keyword_dict= keyword_dictionary()
+        keyword_dict = keyword_dictionary()
         ck = clean_keyword_dictionary(keyword_dict[0])
         kn = keyword_network(ck)
         word_degree = word_network_degree_distribution(kn[0], kn[1], kn[2], kn[3])
         return kn, word_degree[0]
-
-
-
-
-
-
-
-
-

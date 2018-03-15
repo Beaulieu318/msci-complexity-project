@@ -13,8 +13,7 @@ import os
 import pandas as pd
 from matplotlib_venn import venn3, venn3_circles
 import scipy as sp
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
+from msci.utils.utils import data_path
 
 
 def generate_girv_newman_matrix(clean_df, i1, i2):
@@ -25,7 +24,8 @@ def generate_girv_newman_matrix(clean_df, i1, i2):
     G = shopper_similarity_df.as_matrix()
     return G
 
-def read_lm(csv_file=dir_path + '/../data/lm.csv'):
+
+def read_lm(csv_file=data_path + 'lm.csv'):
     lm_df = pd.read_csv(csv_file)
     lm_grouped = lm_df.groupby('community')
     communities = lm_df.community.drop_duplicates().tolist()
@@ -37,7 +37,6 @@ def shops_visited_by_community(signal_df, community_grouped):
     macs = signal_df.mac_address.drop_duplicates().tolist()
     mac_groups = [macs[i] for i in community_grouped]
     return mac_groups
-
 
 
 def create_shopper_shop_pivot(signal_df, matrix=True, sparse=False, sub=False):
@@ -57,20 +56,20 @@ def create_shopper_shop_pivot(signal_df, matrix=True, sparse=False, sub=False):
         shopper_shop_pivot = shopper_shop_pivot.as_matrix()
         if sparse:
             shopper_shop_pivot = sp.sparse.csr_matrix(shopper_shop_pivot)
-        #shopper_shop_pivot = sp.sparse.csr_matrix(shopper_shop_pivot.values)
+            # shopper_shop_pivot = sp.sparse.csr_matrix(shopper_shop_pivot.values)
     if sub:
-        return mac_sub, shopper_shop_pivot 
-    else:     
+        return mac_sub, shopper_shop_pivot
+    else:
         return shopper_shop_pivot
 
 
-def pivot_to_common(pivot_matrix, zero_fill = True, normalise = True):
+def pivot_to_common(pivot_matrix, zero_fill=True, normalise=True):
     reduced = pivot_matrix.copy()
     reduced[reduced > 1] = 1
     common = reduced.dot(reduced.transpose())
     if normalise:
         d = np.diagonal(common)[:, np.newaxis]
-        common = common/d
+        common = common / d
         assert np.sum((np.diagonal(common) == np.ones(np.shape(common)[0])).astype(int)) == np.shape(common)[0]
     if zero_fill:
         np.fill_diagonal(common, 0)
@@ -86,8 +85,8 @@ def generate_haussdorf_matrix(clean_df, i1, i2, zero=False):
         not_zero = np.nonzero(G.flatten())[0]
         mask = np.in1d(range(len(G.flatten())), not_zero).astype('int')
         ph = pairwise_haussdorf_fast(sorted(pos_dict), plot=False, normal=False)
-        ph_zeroed = (ph.flatten()*mask).reshape(np.shape(ph))
-        return ph_zeroed/np.amax(ph_zeroed)
+        ph_zeroed = (ph.flatten() * mask).reshape(np.shape(ph))
+        return ph_zeroed / np.amax(ph_zeroed)
     else:
         ph = pairwise_haussdorf_fast(sorted(pos_dict), plot=False)
         return ph
@@ -148,7 +147,7 @@ def common_stores(signal_df, graph=False, zero_diagonal=True, normalise=True):
     for i in range(len(macs)):
         for j in range(len(macs)):
             common = np.in1d(stores_visited[i], stores_visited[j]).astype('int')
-            stores = stores_visited[i]*common
+            stores = stores_visited[i] * common
             stores = stores[np.nonzero(stores)[0]]
             mutual_stores[i][j] = np.sum(common)
             mutual_dictionary[(i, j)] = stores
@@ -164,7 +163,7 @@ def common_stores(signal_df, graph=False, zero_diagonal=True, normalise=True):
 
 def girv(G):
     gn = nx.algorithms.community.girvan_newman(G)
-    #communities = tuple(sorted(c) for c in next(gn))
+    # communities = tuple(sorted(c) for c in next(gn))
     return gn
 
 
@@ -173,7 +172,7 @@ def graph_modularity(G):
     modularity = 0
     for i in range(len(G)):
         for j in range(len(G)):
-            modularity += G[i][j] - np.sum(G[i])*np.sum(G[j])/(2*m)
+            modularity += G[i][j] - np.sum(G[i]) * np.sum(G[j]) / (2 * m)
 
 
 def adjacency(so=True, excel=False, graph=False, sparse=True):
@@ -185,7 +184,7 @@ def adjacency(so=True, excel=False, graph=False, sparse=True):
     common = pivot_to_common(pivot)
 
     if excel:
-        #np.savetxt('adjacency.csv', common, delimiter=",")
+        # np.savetxt('adjacency.csv', common, delimiter=",")
         df = pd.DataFrame(common)
         df.to_csv('adjacency.csv', index=False, header=False)
     if graph:
@@ -205,7 +204,7 @@ def louvain_mod(G, macs):
 
 
 def louvain_graph(network, lm_file='lm_weighted.csv'):
-    df = pd.read_csv(dir_path + '/../data/' + lm_file)
+    df = pd.read_csv(data_path + '' + lm_file)
     macs = df['mac address'].tolist()
     comms = df['community'].tolist()
 
@@ -216,7 +215,7 @@ def louvain_graph(network, lm_file='lm_weighted.csv'):
 
 
 def similar_shops(signal_df, lm_file='lm_weighted.csv'):
-    df = pd.read_csv(dir_path + '/../data/' + lm_file)
+    df = pd.read_csv(data_path + '' + lm_file)
     macs = df['mac address'].tolist()
     comms = df['community'].tolist()
 
@@ -234,7 +233,8 @@ def similar_shops(signal_df, lm_file='lm_weighted.csv'):
     return stores0, stores1, stores2
 
 
-def venn_diagram(sets, set_labels=('community 1', 'community 2', 'community 3'), title='Stores Visited by Different Communities'):
+def venn_diagram(sets, set_labels=('community 1', 'community 2', 'community 3'),
+                 title='Stores Visited by Different Communities'):
     fig = plt.figure()
     v = venn3(sets, set_labels)
     plt.title(title)
@@ -242,7 +242,7 @@ def venn_diagram(sets, set_labels=('community 1', 'community 2', 'community 3'),
 
 
 def visits_from_each_community(signal_df, lm_file='lm_subset_weighted.csv', full=False):
-    df = pd.read_csv(dir_path + '/../data/' + lm_file)
+    df = pd.read_csv(data_path + '' + lm_file)
     grouped_df = df.groupby('community')
     groups = [grouped_df.get_group(i) for i in range(3)]
 
@@ -276,13 +276,13 @@ def store_pie_chart(store_grouped, store_name):
 def community_pie_chart(signal_df, lm_file='lm_subset_unweighted.csv'):
     full_df = visits_from_each_community(signal_df, lm_file, full=True)
     comm_grouped = full_df.groupby('community')
-    #return comm_grouped
+    # return comm_grouped
     store_visits = {
         comm.community.tolist()[0]: {
             store: comm.store_id.tolist().count(store) for store in comm.store_id.unique().tolist()
-            }
-             for comm in [comm_grouped.get_group(i) for i in range(4)]
-             }
+        }
+        for comm in [comm_grouped.get_group(i) for i in range(4)]
+    }
     return store_visits
 
 
@@ -303,21 +303,20 @@ def modularity(community_dictionary, common_stores_matrix, directed=True):
     :param community_dictionary: (dict) {i: c} i \in shopper_population, c = community number
     :param common_stores_matrix: (numpy matrix) weighted matrix for mutual stores visited 
     :return: (float) Modularity, Q
-    """    
-    m = 0.5*np.sum(common_stores_matrix)
+    """
+    m = 0.5 * np.sum(common_stores_matrix)
     Q = 0
     for i in range(len(community_dictionary)):
         for j in range(len(community_dictionary)):
             if community_dictionary[i] == community_dictionary[j]:
                 Aij = community[i][j]
                 if directed:
-                    kikj = np.sum(common_stores_matrix[i]*np.sum(common_stores_matrix.T[j]))
-                    Q += Aij/m - kikj/(m**2)
+                    kikj = np.sum(common_stores_matrix[i] * np.sum(common_stores_matrix.T[j]))
+                    Q += Aij / m - kikj / (m ** 2)
                 else:
-                    kikj = np.sum(common_stores_matrix[i])*np.sum(common_stores_matrix[j])
-                    Q += (Aij - kikj/(2*m))/(2*m)
+                    kikj = np.sum(common_stores_matrix[i]) * np.sum(common_stores_matrix[j])
+                    Q += (Aij - kikj / (2 * m)) / (2 * m)
     return Q
-
 
 # def louvain_modularity(G):
 #     m = np.sum(G)

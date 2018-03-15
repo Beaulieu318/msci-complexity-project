@@ -29,8 +29,6 @@ from msci.analysis.complexity import matrix_correlation
 
 matplotlib.style.use('ggplot')
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
 data_import = True
 
 

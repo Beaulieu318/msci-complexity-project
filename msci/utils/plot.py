@@ -12,9 +12,7 @@ from matplotlib.pyplot import clf
 from scipy.stats import gaussian_kde
 
 from msci.utils.animation import RealShoppersAnimation
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
+from msci.utils.utils import images_path
 
 """
 Path plots on the map of Mall of Mauritius
@@ -33,7 +31,7 @@ def plot_path(signal_df, mac_address_df, scatter=True):
 
     fig = plt.figure()
 
-    img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
+    img = mpimg.imread(images_path + 'mall_of_mauritius_map.png')
     plt.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
     if type(mac_address_df) == pd.core.frame.DataFrame:
@@ -79,7 +77,7 @@ def plot_path_jn(signal_df, mac_address_df, axes, plot_type='path', label=True):
     else:
         raise Exception('mac_address_df is not a Series, list or str of mac addresses')
 
-    img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
+    img = mpimg.imread(images_path + 'mall_of_mauritius_map.png')
 
     axes.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
@@ -113,7 +111,7 @@ def plot_points_on_map(x, y, c='r', label=False):
     """
     #fig = plt.figure()
 
-    img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
+    img = mpimg.imread(images_path + 'mall_of_mauritius_map.png')
     plt.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
     for i in range(len(x)):
@@ -141,7 +139,7 @@ def plot_points_on_map_jn(x, y, axes, c='r', label=False):
     :return: A plot
     """
 
-    img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
+    img = mpimg.imread(images_path + 'mall_of_mauritius_map.png')
     axes.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.05)
 
     axes.scatter(x, y, c=c, s=2, label=label)

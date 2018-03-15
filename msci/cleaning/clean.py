@@ -13,8 +13,8 @@ from msci.cleaning import bayesian_inference
 from msci.cleaning import store_ids
 
 from msci.utils import utils
+from msci.utils.utils import data_path
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
 
 FEATURE_LIST = [
     'frequency',
@@ -64,7 +64,7 @@ def clean_signals(largest_separation=15, save=False):
     signal_df.reset_index(inplace=True, drop=True)
 
     if save:
-        signal_df.to_csv(dir_path + '/../data/bag_mus_12-22-2016v4.csv', index=False)
+        signal_df.to_csv(data_path + 'bag_mus_12-22-2016v4.csv', index=False)
 
     return signal_df
 
@@ -82,7 +82,7 @@ def feature_extraction(signal_df, save=False):
         )
 
         if save:
-            mall_mac_address_df.to_csv(dir_path + '/../data/{}_featuresv2.csv'.format(mall['file_name']), index=False)
+            mall_mac_address_df.to_csv(data_path + '{}_featuresv2.csv'.format(mall['file_name']), index=False)
 
         mall['df'] = mall_mac_address_df
 
@@ -98,7 +98,7 @@ def clustering(save=False):
 
     for mall in tqdm(malls, desc='Clustering'):
 
-        mall_mac_address_df = pd.read_csv(dir_path + '/../data/{}_features.csv'.format(mall['file_name']))
+        mall_mac_address_df = pd.read_csv(data_path + '{}_features.csv'.format(mall['file_name']))
 
         mall_mac_address_df = mall_mac_address_df[mall_mac_address_df.frequency > 10]
         mall_mac_address_df = mall_mac_address_df.dropna()
@@ -113,7 +113,7 @@ def clustering(save=False):
         mall_mac_address_df['shopper_label'] = mall_mac_address_df['shopper_probability'].apply(find_label)
 
         if save:
-            mall_mac_address_df.to_csv(dir_path + '/../data/{}_features_clustered.csv'.format(mall['file_name']), index=False)
+            mall_mac_address_df.to_csv(data_path + '{}_features_clustered.csv'.format(mall['file_name']), index=False)
 
         mall['df'] = mall_mac_address_df
 

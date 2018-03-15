@@ -2,8 +2,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import matplotlib.image as mpimg
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
+from msci.utils.utils import images_path
 
 
 class RealShoppersAnimation:
@@ -19,7 +18,7 @@ class RealShoppersAnimation:
         self.ax = self.fig.add_axes([0, 0, 1, 1], frameon=False)
 
     def _initiate_animation(self):
-        img = mpimg.imread(dir_path + '/../images/mall_of_mauritius_map.png')
+        img = mpimg.imread(images_path + 'mall_of_mauritius_map.png')
         self.ax.imshow(img[::-1], origin='lower', extent=[-77, 470, -18, 255], alpha=0.1)
 
         self.ax.set_xlim(0, 350), self.ax.set_xticks([])

@@ -11,8 +11,6 @@ from tqdm import tqdm_notebook as tqdm
 from msci.utils import utils
 import msci.utils.plot as pfun
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
 
 def period_analysis(signal_df, macs):
     grouped = signal_df.groupby('mac_address')

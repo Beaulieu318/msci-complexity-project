@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.cm as cm
 
-matplotlib.style.use('ggplot')
-
 import seaborn as sns
 
 from msci.utils import utils
@@ -22,8 +20,9 @@ from msci.utils.plot import plot_path_jn, plot_histogram_jn, plot_points_on_map_
 from sklearn import preprocessing
 from scipy.stats import linregress
 
-data_import = False
+matplotlib.style.use('ggplot')
 
+data_import = False
 
 if data_import:
     mac_address_df = utils.import_mac_addresses(version=4)
@@ -62,7 +61,7 @@ def matrix_evaluation(onehot_Y, K, mac_address_len, le):
 
     L = len(mac_address_len)
 
-    for l in range(L):      
+    for l in range(L):
         seq_start = sum(mac_address_len[:l])
         seq_end = sum(mac_address_len[:l + 1])
 
@@ -130,22 +129,22 @@ def manual_matrix(r_signal_df, return_permitted=True, jn=False):
         store_initial[store[0]] += 1
         for i in range(len(store) - 1):
             if return_permitted:
-                store_transitions[store[i]].append(store[i+1])
+                store_transitions[store[i]].append(store[i + 1])
             else:
                 if store[i + 1] != store[i]:
-                    store_transitions[store[i]].append(store[i+1])
+                    store_transitions[store[i]].append(store[i + 1])
 
     transition_matrix = {}
 
     for i in store_names:
         row_transition = np.array([store_transitions[i].count(j) for j in store_names])
-        transition_matrix[i] = row_transition/np.sum(row_transition)
+        transition_matrix[i] = row_transition / np.sum(row_transition)
 
     sum_initial = sum(store_initial.values())
 
-    #return store_initial
+    # return store_initial
 
-    normalised_initial = {i: j/sum_initial for (i,j) in list(zip(store_names, list(store_initial.values())))}
+    normalised_initial = {i: j / sum_initial for (i, j) in list(zip(store_names, list(store_initial.values())))}
 
     largest_pi = max(normalised_initial.keys(), key=(lambda key: normalised_initial[key]))
     print(largest_pi, normalised_initial[largest_pi])
@@ -168,8 +167,8 @@ def initial_store(r_signal_df):
     first_store = [i[0] for i in store_lists]
     initial_dict = {i: first_store.count(i) for i in store_names}
     sum_initial = sum(initial_dict.values())
-    assert(sum_initial == len(macs))
-    normalised_initial = {i: initial_dict[i]/sum_initial for i in initial_dict}
+    assert (sum_initial == len(macs))
+    normalised_initial = {i: initial_dict[i] / sum_initial for i in initial_dict}
     return initial_dict, normalised_initial
 
 
@@ -186,11 +185,10 @@ def ssv_eigen(A):
     eig = np.linalg.eig(A)
     mod_eig = [abs(e) for e in eig[0]]
     eig1 = np.array([1 - me for me in mod_eig])
-    print(np.argmin(eig1**2))
-    eigenvec = eig[1][np.argmin(eig1**2)]
+    print(np.argmin(eig1 ** 2))
+    eigenvec = eig[1][np.argmin(eig1 ** 2)]
     real_eigenvec = abs(eigenvec)
     return real_eigenvec
-
 
 
 def steady_state_vector(A, pi, repeats, analytic=False):
@@ -204,7 +202,7 @@ def steady_state_vector(A, pi, repeats, analytic=False):
     else:
         for i in range(repeats):
             pi = A.dot(pi)
-            residues.append((pi - pis[-1])**2)
+            residues.append((pi - pis[-1]) ** 2)
             pis.append(copy.deepcopy(pi))
         return pi, [np.sum(r) for r in residues], pis
 
@@ -214,7 +212,7 @@ def process(names, A, pi, shop_df, rep):
     steady_state = ssv[0]
     data = [names, pi.tolist(), A.dot(pi).tolist(), steady_state.tolist()]
     data_T = list(map(list, zip(*data)))
-    store_pi_df = pd.DataFrame(data_T, columns = ('store_id', 'pi', 'piA', 'avpiA'))
+    store_pi_df = pd.DataFrame(data_T, columns=('store_id', 'pi', 'piA', 'avpiA'))
     shop_probs_df = pd.merge(shop_df, store_pi_df, on='store_id', how='left')
     shop_probs_df.sort_values('piA', ascending=False)
     return shop_probs_df
@@ -235,23 +233,3 @@ def ingoing_store_probabilities(transition_matrix, store_names, dict=True):
 def different_shop_number_pi(A, pi, shopper_df):
     number_of_shops_visited = shopper_df.number_of_shops.as_matrix()
     return number_of_shops_visited
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

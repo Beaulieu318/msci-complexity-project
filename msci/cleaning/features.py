@@ -5,8 +5,7 @@ from tqdm import tqdm_notebook as tqdm
 
 from msci.utils import utils
 from msci.cleaning import kstest
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
+from msci.utils.utils import data_path
 
 
 def create_mac_address_df(signal_df):
@@ -59,7 +58,7 @@ def find_device_type(mac_address_df):
     :param mac_address_df: (pd.DataFrame) The mac addresses
     :return: (list) the manufacturer for the mac addresses
     """
-    mac_cross_reference_df = pd.read_csv(dir_path + '/../data/mac_address_cross_reference.csv')
+    mac_cross_reference_df = pd.read_csv(data_path + 'mac_address_cross_reference.csv')
     mac_address_df2 = mac_address_df.copy()
     mac_address_df2['mac_address_short'] = mac_address_df2.mac_address.str.replace(':', '').str.upper().str[:6]
     mac_address_df2 = mac_address_df2.merge(
