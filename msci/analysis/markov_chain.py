@@ -26,10 +26,10 @@ data_import = False
 
 
 if data_import:
-    mac_address_df = utils.import_mac_addresses(version=3)
+    mac_address_df = utils.import_mac_addresses(version=4)
     signal_df = utils.import_signals(version=4)
 
-    shopper_df = mac_address_df[mac_address_df.dbscan_label == 'Shopper']
+    shopper_df = mac_address_df.query("dbscan_label == 'Shopper' or bayesian_label == 'Shopper'")
 
     shop_df = utils.import_shop_directory(mall='Mall of Mauritius', version=2)
 
