@@ -373,6 +373,27 @@ def calculate_ks_statistic(signal_df, mac_address_df):
     return ks_statistics
 
 
+def probability_of_moving_forwards(signal_df, mac_address_df, remove_consecutive=False):
+    signal_sorted_df = signal_df.sort_values('date_time')
+    signal_mac_group = signal_sorted_df.groupby('mac_address')
+    macs = mac_address_df.mac_address.tolist()
+    probabilities = []
+    for mac in tqdm(macs, desc='Forwards Probability'):
+        mac_signals_df = signal_mac_group.get_group(mac)
+        if remove_consecutive:
+            mac_signals_df = mac_signals_df.loc[mac_signals_df.store_id.shift(-1) != mac_signals_df.store_id]
+        r = mac_signals_df[['x', 'y']].as_matrix()
+        prob = np.nan
+        if len(r) > 2:
+            direction = r[1:] - r[:-1]
+            direction = direction[np.any(direction != 0, axis=1)]
+            if len(direction) > 1:
+                r1r2 = np.array([np.dot(i, j) for i, j in zip(direction[1:], direction[:-1])])
+                prob = len(np.where(r1r2 > 0)[0]) / len(r1r2)
+        probabilities.append(prob)
+    return probabilities
+
+
 def create_mac_address_features(signal_df=None, mall='Mall of Mauritius', export_location=None):
     """
     Creates the mac address features dataframe which is used to determine whether the device is a shopper
