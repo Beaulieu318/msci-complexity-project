@@ -46,84 +46,53 @@ if data_import:
         )]
 
 
-# def markov_chain_pre(r_signal_df):
-#     le = preprocessing.LabelEncoder()
-#     le.fit(r_signal_df.sort_values('store_id').store_id.unique())
-#     K = len(le.classes_)
-#     le_Y = le.transform(r_signal_df.sort_values('mac_address').store_id)
+def markov_chain(r_signal_df, return_permitted=True, on='store_id'):
+    mac_address_len = r_signal_df.groupby('mac_address')[on].apply(len).as_matrix()
 
-#     onehot = preprocessing.OneHotEncoder()
-#     onehot.fit(le_Y[:, np.newaxis])
-#     onehot_Y = onehot.transform(le_Y[:, np.newaxis])
+    le = preprocessing.LabelEncoder()
+    le.fit(r_signal_df.sort_values(on)[on].unique())
+    K = len(le.classes_)
+    le_Y = le.transform(r_signal_df[on])
 
-#     return onehot_Y, K, le
+    onehot = preprocessing.OneHotEncoder()
+    onehot.fit(le_Y[:, np.newaxis])
+    onehot_Y = onehot.transform(le_Y[:, np.newaxis])
 
+    N = np.zeros((K, K))
+    N1 = np.zeros(K)
 
-# def matrix_evaluation(onehot_Y, K, mac_address_len, le):
-#     N = np.zeros((K, K))
-#     N1 = np.zeros(K)
+    L = len(mac_address_len)
 
-#     L = len(mac_address_len)
+    for l in range(L):
 
-#     for l in range(L):
-#         seq_start = sum(mac_address_len[:l])
-#         seq_end = sum(mac_address_len[:l + 1])
+        seq_start = sum(mac_address_len[:l])
+        seq_end = sum(mac_address_len[:l + 1])
 
-#         seq = onehot_Y[seq_start: seq_end].toarray()
+        seq = onehot_Y[seq_start: seq_end].toarray()
 
-#         T = len(seq)
+        if not return_permitted:
+            sel = np.ones(len(seq), dtype=bool)
+            sel[1:] = np.any(seq[1:] != seq[:-1], axis=1)
+            seq = seq[sel]
 
-#         N1 += seq[0]
+        T = len(seq)
 
-#         if T > 1:
-#             for t in range(1, T):
-#                 N += np.outer(seq[t - 1], seq[t])
+        N1 += seq[0]
 
-#     pi = N1 / N1.sum()
-#     A = (N.T / N.sum(axis=1)).T
+        if T > 1:
+            for t in range(1, T):
+                N += np.outer(seq[t - 1], seq[t])
 
-#     return le.inverse_transform(range(len(pi))), pi, A
+    pi = N1 / N1.sum()
+    A = (N.T / N.sum(axis=1)).T
+    names = le.inverse_transform(range(len(pi)))
 
-
-# def analyse(names, pi, A, shop_df, save=False):
-#     val = np.dot(pi, A.dot(A).dot(A).dot(A).dot(A).dot(A).dot(A).dot(A).dot(A).dot(A).dot(A))
-
-#     pi_t = np.copy(pi)
-#     val2 = pi_t
-
-#     for i in range(19):
-#         pi_t = pi_t.dot(A)
-#     pi_t /= sum(pi_t)
-#     val2 += pi_t
-#     val2 /= sum(val2)
-
-#     store_pi_df = pd.DataFrame(
-#         np.array([
-#             names,
-#             pi.astype(float),
-#             val / sum(val),
-#             val2 / sum(val2),
-#         ]).T,
-#         columns=('store_id', 'pi', 'piA', 'avpiA')
-#     )
-
-#     if save:
-#         np.savez(
-#             'shop_markov_data',
-#             shop_names=le.inverse_transform(range(len(pi))),
-#             transition_matrix=A,
-#             initial_probabilities=pi,
-#         )
-
-#     shop_probs_df = pd.merge(shop_df, store_pi_df, on='store_id', how='left')
-#     shop_probs_df.sort_values('piA', ascending=False)
-
-#     return store_pi_df, shop_probs_df, val
+    return names, A, pi
 
 
 def manual_matrix(r_signal_df, return_permitted=True, jn=False):
     macs = r_signal_df.mac_address.drop_duplicates().tolist()
-    store_names = r_signal_df.store_id.drop_duplicates().tolist()
+    store_names = r_signal_df.sort_values('store_id').store_id.drop_duplicates().tolist()
     grouped = r_signal_df.groupby('mac_address')
     groups = [grouped.get_group(i) for i in macs]
     stores = [i.store_id.tolist() for i in groups]
@@ -176,9 +145,8 @@ def initial_store(r_signal_df):
     return initial_dict, normalised_initial
 
 
-def compare(r_signal_df, mac_address_len):
-    pre = markov_chain_pre(r_signal_df)
-    matrix = matrix_evaluation(pre[0], pre[1], mac_address_len, pre[2])
+def compare(r_signal_df):
+    matrix = markov_chain(r_signal_df)
     manual = manual_matrix(r_signal_df)
     bb_initial = matrix[0][np.argmax(matrix[-2])]
     manual_initial = manual[-1]
@@ -229,6 +197,33 @@ def process(names, A, pi, shop_df, rep, save=False):
     return shop_probs_df
 
 
+def steady_state_vector_t(A, pi, repeats, analytic=False):
+    pis = [pi]
+    residues = []
+    if analytic:
+        I = np.eye(len(A), dtype=int)
+        P = I - A
+        q = np.linalg.solve(P, np.zeros(len(A)).reshape(len(A), 1))
+        return q, P
+    else:
+        for i in range(repeats):
+            pi = A.T.dot(pi)
+            residues.append((pi - pis[-1]) ** 2)
+            pis.append(copy.deepcopy(pi))
+        return pi, [np.sum(r) for r in residues], pis
+
+
+def process_t(names, A, pi, shop_df, rep):
+    ssv = steady_state_vector(A, pi, repeats=rep, analytic=False)
+    steady_state = ssv[0]
+    data = [names, pi.tolist(), A.T.dot(pi).tolist(), steady_state.tolist()]
+    data_T = list(map(list, zip(*data)))
+    store_pi_df = pd.DataFrame(data_T, columns=('store_id', 'pi', 'piA', 'ss'))
+    shop_probs_df = pd.merge(shop_df, store_pi_df, on='store_id', how='left')
+    shop_probs_df.sort_values('piA', ascending=False)
+    return shop_probs_df
+
+
 def ingoing_store_probabilities(transition_matrix, store_names, dict=True):
     if dict:
         ingoing = {}
@@ -245,9 +240,116 @@ def different_shop_number_pi(A, pi, shopper_df):
     number_of_shops_visited = shopper_df.number_of_shops.as_matrix()
     return number_of_shops_visited
 
-"""
-Simulation
-"""
+
+"""Markov Chain Clustering"""
+
+
+def markov_chain_clustering(r_signal_df, pi_init, b_init, A_init, n_iter):
+    on = 'store_category'
+
+    mac_address_len = r_signal_df.groupby('mac_address')[on].apply(len).as_matrix()
+
+    le = preprocessing.LabelEncoder()
+    le.fit(r_signal_df.sort_values(on)[on].unique())
+    K = len(le.classes_)
+    le_Y = le.transform(r_signal_df[on])
+
+    onehot = preprocessing.OneHotEncoder()
+    onehot.fit(le_Y[:, np.newaxis])
+    onehot_Y = onehot.transform(le_Y[:, np.newaxis])
+
+    pi, b, A, gamma = exp_max(le_Y, onehot_Y, mac_address_len, pi_init, b_init, A_init, n_iter)
+
+    names = le.inverse_transform(range(K))
+
+    return names, pi, b, A, gamma
+
+
+def exp_max(x_index, x_onehot, lengths, pi, b, A, n_iter=5):
+    for _ in tqdm(range(n_iter)):
+        gamma = _expectation(
+            x_index=x_index,
+            lengths=lengths,
+            pi=pi, b=b, A=A
+        )
+
+        pi, b, A = _maximisation(
+            x_onehot=x_onehot,
+            lengths=lengths,
+            gamma=gamma
+        )
+
+    return pi, b, A, gamma
+
+
+def _expectation(x_index, lengths, pi, b, A):
+    K = len(pi)
+    L = len(lengths)
+    gamma = np.zeros((K, L))
+
+    for k in range(K):
+        gamma[k] = np.zeros(L)
+
+        for l in range(L):
+            seq_start = sum(lengths[:l])
+            seq_end = sum(lengths[:l + 1])
+
+            seq = x_index[seq_start: seq_end]
+
+            # sel = np.ones(len(seq), dtype=bool)
+            # sel[1:] = seq[1:] != seq[:-1]
+            # seq = seq[sel]
+
+            gamma[k][l] = np.prod(b[k][seq[0]]) * np.prod(A[k][seq[:-1], seq[1:]])
+
+        gamma[k] = pi[k] * gamma[k]
+
+    gamma[:, np.where(gamma.sum(0) == 0)] = 1 / K
+
+    gamma = gamma / gamma.sum(axis=0)
+
+    return gamma
+
+
+def _maximisation(x_onehot, lengths, gamma):
+    K = gamma.shape[0]
+    L = len(lengths)
+    D = x_onehot.shape[1]
+
+    pi = np.zeros(K)
+    b = np.zeros((2, D))
+    A = np.ones((2, D, D))
+
+    for k in range(K):
+        for l in range(L):
+            seq_start = sum(lengths[:l])
+            seq_end = sum(lengths[:l + 1])
+
+            seq = x_onehot[seq_start: seq_end].toarray()
+
+            # sel = np.ones(len(seq), dtype=bool)
+            # sel[1:] = np.any(seq[1:] != seq[:-1], axis=1)
+            # seq = seq[sel]
+
+            pi[k] += gamma[k][l]
+
+            T = len(seq)
+
+            b[k] += gamma[k][l] * seq[0]
+
+            if T > 1:
+                for t in range(1, T):
+                    A[k] += gamma[k][l] * np.outer(seq[t - 1], seq[t])
+
+        pi[k] = pi[k] / L
+        b[k] = b[k] / b[k].sum(axis=0)
+        A[k] = (A[k].T / A[k].sum(axis=1)).T
+
+    return pi, b, A
+
+
+"""Simulation"""
+
 
 from importlib import reload
 from matplotlib import animation, rc
@@ -264,7 +366,7 @@ if simulate:
     signal_df = utils.import_signals(version=4)
     shop_df = utils.import_shop_directory(mall='Mall of Mauritius', version=2)
     shopper_df = mac_address_df[(mac_address_df.dbscan_label == 'Shopper') & (mac_address_df.wifi_type != 'lawifiuser')]
-    
+
     r_signal_df = signal_df[
     signal_df.store_id.notnull() &
     (signal_df.store_id.str[0] == 'B') &
@@ -294,9 +396,9 @@ if simulate:
         shop_markov_data = np.load('transition_return.npz')
     else:
         shop_markov_data = np.load('transition_no_return.npz')
-    
+
     sim.A, sim.pi = environment.realign_transition_matrix(
-    shop_markov_data['shop_names'], 
+    shop_markov_data['shop_names'],
     shop_markov_data['transition_matrix'].T,
     shop_markov_data['initial_probabilities'],
     )
@@ -355,13 +457,13 @@ def actual_sim_hist(signal_df, shopper_df, sim):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(16, 6))
 
     plot_histogram_jn(
-        signal_df[signal_df.mac_address.isin(shopper_df.mac_address)], 
+        signal_df[signal_df.mac_address.isin(shopper_df.mac_address)],
         axes=ax,
         label='Actual Shoppers',
     )
 
     plot_histogram_jn(
-        sim.signal_df, 
+        sim.signal_df,
         axes=ax,
         label='Simulated Shoppers',
     );
@@ -435,8 +537,8 @@ def store_area_plot(shop_df, sim, r_signal_df):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(18, 10))
 
     area_shop_df = shop_df[
-        (shop_df.area > 0) & 
-        (shop_df.act_count > 0) & 
+        (shop_df.area > 0) &
+        (shop_df.act_count > 0) &
         (shop_df.sim_count > 0) &
         shop_df.sim_count.notnull()
     ]
@@ -448,7 +550,7 @@ def store_area_plot(shop_df, sim, r_signal_df):
     area_fit = np.linspace(1, 10**4, 10)
     count_of_shoppers_fit = [10**intercept*x**slope for x in area_fit]
     ax.plot(
-        area_fit, count_of_shoppers_fit, 'r--', 
+        area_fit, count_of_shoppers_fit, 'r--',
         label='Power Law Fit ($Ax^{\gamma}$) \n $\gamma=%.2f \pm %.2f$' % (slope, std_err)
     )
 
@@ -459,7 +561,7 @@ def store_area_plot(shop_df, sim, r_signal_df):
     area_fit = np.linspace(1, 10**4, 10)
     count_of_shoppers_fit = [10**intercept*x**slope for x in area_fit]
     ax.plot(
-        area_fit, count_of_shoppers_fit, 'b--', 
+        area_fit, count_of_shoppers_fit, 'b--',
         label='Power Law Fit ($Ax^{\gamma}$) \n $\gamma=%.2f \pm %.2f$' % (slope, std_err)
     )
 
@@ -485,5 +587,3 @@ def add_count_of_shoppers(signal_df, shop_df):
         except:
             count_of_shoppers.append(np.nan)
     return count_of_shoppers
-
-
