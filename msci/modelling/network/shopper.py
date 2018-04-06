@@ -64,7 +64,7 @@ class Shopper:
         max_speed_meters_per_minute = 83
         max_speed_meters_per_iteration = max_speed_meters_per_minute * minutes_per_iteration
 
-        probability_leaving_shop = 0.05
+        probability_leaving_shop = 0.050
 
         self.last_location = self.location
         self.last_location_index = self.location_index
@@ -79,28 +79,35 @@ class Shopper:
             # Probability of leaving a shop
             if random.random() < probability_leaving_shop:
 
-                # Max speed limitation
-                possible_locations_index = np.where(
-                    environment.shop_distance_matrix[self.last_location_index] < max_speed_meters_per_iteration
-                )[0]
+                possible_locations_index = list(range(len(environment.locations)))
+                possible_locations_index.remove(self.location_index)
+                possible_locations_index = np.array(possible_locations_index)
 
-                probabilities = np.zeros(len(possible_locations_index))
+                # Max speed limitation
+                # possible_locations_index = possible_locations_index[
+                #     np.where(
+                #         environment.shop_distance_matrix[self.last_location_index][possible_locations_index] < max_speed_meters_per_iteration
+                #     )[0]
+                # ]
+
+                # Probabilistic measures
+                probabilities = np.ones(len(possible_locations_index))
 
                 # Increase probability for forwards direction
-                r1r2 = np.dot(
-                    environment.shop_direction_matrix[self.last_location_index][possible_locations_index],
-                    self.direction,
-                )
-                probabilities[np.where(r1r2 == 0)] = 0.5
-                probabilities[np.where(r1r2 > 0)] = 0.50
-                probabilities[np.where(r1r2 < 0)] = 0.50
-
-                # # Decrease probability to return to a shop
-                probabilities[np.isin(possible_locations_index, self.locations_index_visited)] *= 0.05
-                probabilities[~np.isin(possible_locations_index, self.locations_index_visited)] *= 0.95
+                # r1r2 = np.dot(
+                #     environment.shop_direction_matrix[self.last_location_index][possible_locations_index],
+                #     self.direction,
+                # )
+                # probabilities[np.where(r1r2 == 0)] = 0.5
+                # probabilities[np.where(r1r2 > 0)] = 0.50
+                # probabilities[np.where(r1r2 < 0)] = 0.50
 
                 # Transition probabilities from real data
-                probabilities *= self.A[self.last_location_index][possible_locations_index]
+                probabilities = self.A[self.last_location_index][possible_locations_index]
+
+                # Decrease probability to return to a shop
+                # probabilities[np.isin(possible_locations_index, self.locations_index_visited)] *= 0.05
+                # probabilities[~np.isin(possible_locations_index, self.locations_index_visited)] *= 0.95
 
                 # Next shops visited
                 self.location_index = np.random.choice(possible_locations_index, p=probabilities/sum(probabilities))
