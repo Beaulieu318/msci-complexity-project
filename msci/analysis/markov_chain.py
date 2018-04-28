@@ -23,7 +23,7 @@ from scipy.stats import linregress
 matplotlib.style.use('ggplot')
 
 data_import = False
-simulate = True
+simulate = False
 return_p = False
 
 if data_import:
