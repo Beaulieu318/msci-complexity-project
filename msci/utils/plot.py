@@ -155,7 +155,7 @@ Histogram plots against time
 """
 
 
-def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
+def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None, style=None):
     """
     This plots the histogram of mac address against time.
     The y axis shows how many mac addresses (devices) where present over during the minute_resolution intervals.
@@ -171,8 +171,12 @@ def plot_histogram_jn(signal_df, axes, minute_resolution=15, label=None):
     signal_time_df = signal_df2.groupby('date_time').mac_address.nunique().to_frame()
     if label is not None:
         signal_time_df.rename(columns={'mac_address': label}, inplace=True)
-
-    ax = signal_time_df.plot(ax=axes)
+        
+    if style is None:
+        ax = signal_time_df.plot(ax=axes)
+    else:
+        ax = signal_time_df.plot(ax=axes, style=style)
+    
     ax.set_xlabel('Time (month-day hour)', fontsize=15)
     ax.set_ylabel('Count of mac addresses \n per {} mins (no.)'.format(minute_resolution), fontsize=15)
 
