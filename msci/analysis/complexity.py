@@ -15,17 +15,15 @@ from tqdm import tqdm_notebook as tqdm
 def path_length(signal_df):
     macs = signal_df.mac_address.drop_duplicates().tolist()
     grouped = signal_df.groupby('mac_address')
-    groups = [grouped.get_group(i) for i in macs]
     path_length_distribution = []
     time_diff = []
-    for group in groups:
-        times = group.date_time.tolist()
-        x = group.x.tolist()
-        y = group.y.tolist()
-        pos = list(zip(x, y))
+    for mac in tqdm(macs):
+        mac_group = grouped.get_group(mac)
+        times = mac_group.date_time.tolist()
+        pos = mac_group[['x', 'y']].as_matrix()
         time_deltas = [utils.time_difference(times[i], times[i+1]) for i in range(len(times) - 1)]
         path_lengths = [utils.euclidean_distance(pos[i], pos[i+1]) for i in range(len(pos) - 1)]
-        norm_path_lengths = [10*(i/j) for (i, j) in list(zip(path_lengths, time_deltas))]
+        norm_path_lengths = [(i/j) for (i, j) in list(zip(path_lengths, time_deltas))]
         path_length_distribution.append(norm_path_lengths)
         time_diff.append(time_deltas)
     flat_pl = [i for j in path_length_distribution for i in j]
