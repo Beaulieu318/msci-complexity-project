@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 
+"""
+This is no longer used by is here for legacy purposes and if ever we need it again
+"""
+
 COLUMNS_TO_IMPORT = ['mac_address', 'date_time', 'location', 'store_id', 'x', 'y']
 
 
